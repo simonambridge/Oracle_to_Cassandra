@@ -5,10 +5,10 @@
 --
 <br>
 <H1>Set Up Red Hat</H1>
-<br>
-<h2>Add gateway in /etc/sysconfig/network</h2>
+Various steps required to configure the default Oracle-supplied VM image.
+<h2>1.Add gateway in /etc/sysconfig/network</h2>
 
-eth8 in /etc/sysconfig/network-scripts
+The default NIC is on eth8 - we need to tweak the  icfg-eth8 file in ```/etc/sysconfig/network-scripts```
 
 <pre>
 DEVICE=eth8
@@ -26,7 +26,7 @@ service network restart
 </pre>
 
 <br>
-<h2>Check the version of Red Hat</h2>
+<h2>2.Check the version of Red Hat</h2>
 <pre>
 # cat /etc/redhat-release 
 Red Hat Enterprise Linux Server release 6.8 (Santiago)
@@ -34,18 +34,21 @@ Red Hat Enterprise Linux Server release 6.8 (Santiago)
 
 
 <br>
-<H2>Fix VBox Shared Clipboard</H2>
+<H2>3.Fix VBox Shared Clipboard</H2>
+My clipboard din't seem to work but this fixes it.
 install guest additions
 restart
 <pre>
-killall VBoxClient
-VBoxClient-all
+# killall VBoxClient
+# VBoxClient-all
 </pre>
 
 <br>
-<H1>Set Up DatStax Components</H1>
+<H1>Set Up DataStax Components</H1>
 <br>
-<h2>Add /etc/yum.repos.d/datastax.repo</H2>
+<h2>Add The DataStax Repo</H2>
+As root create ```/etc/yum.repos.d/datastax.repo```
+<pre># vi /etc/yum.repos.d/datastax.repo</pre>
 <pre>
 [datastax] 
 name = DataStax Repo for DataStax Enterprise
@@ -54,13 +57,23 @@ enabled=1
 gpgcheck=0
 </pre>
 
+<h2>Import The DataStax Repo Key</H2>
+<pre>
 rpm --import http://rpm.datastax.com/rpm/repo_key 
+</pre>
 
 <br>
-<h2>Install DSE, OpsCenter & DataStax Agent</H2>
+<h2>Install DSE Components</H2>
+<h3>DSE Platform</h3>
 <pre>
 sudo yum install dse-full-5.0.1-1
+</pre>
+<h3>DataStax OpsCenter</h3>
+<pre>
 sudo yum install opscenter --> 6.0.2.1
+</pre>
+<h3>DataStax OpsCenter Agent</h3>
+<pre>
 sudo yum install datastax-agent --> 6.0.2.1
 </pre>
 
@@ -72,13 +85,13 @@ cqlsh
 
 http://tecadmin.net/install-python-2-7-on-centos-rhel/#
 <pre>
-yum install gcc
-cd /usr/src
-wget https://www.python.org/ftp/python/2.7.12/Python-2.7.12.tgz
-tar xzf Python-2.7.12.tgz 
-cd Python-2.7.12
-./configure
-make altinstall
+# yum install gcc
+# cd /usr/src
+# wget https://www.python.org/ftp/python/2.7.12/Python-2.7.12.tgz
+# tar xzf Python-2.7.12.tgz 
+# cd Python-2.7.12
+# ./configure
+# make altinstall
 </pre>
 
 <pre>
@@ -86,12 +99,13 @@ make altinstall
 Python 2.7.12
 </pre>
 ("python --version" still brings up 2.6.6)
+
 cqlsh now works
 
 
 <br>
 <h2>Install EPEL And Other Pre-Reqs (mostly Python stuff)</h2>
-Time zone error starting cqlsh:
+I got a time zone warning message when starting cqlsh:
 <pre>
 # cqlsh
 Warning: Timezone defined and 'pytz' module for timezone conversion not installed. Timestamps will be displayed in UTC timezone.
@@ -102,11 +116,18 @@ Use HELP for help.
 cqlsh> 
 </pre>
 
+I installed EPEL (Extra Packages for Enterprise Linux) and some Python utilities.
+<br>
+<br>
+
+<h3>EPEL</h3>
+I found a good EPEL install link here:
 <pre>
 http://sharadchhetri.com/2014/05/30/install-pip-centos-rhel-ubuntu-debian/
 yum install wget
 </pre>
 
+Download and install:
 <pre>
 # rpm -ivh http://dl.fedoraproject.org/pub/epel/6/x86_64/epel-release-6-8.noarch.rpm
 Retrieving http://dl.fedoraproject.org/pub/epel/6/x86_64/epel-release-6-8.noarch.rpm
@@ -115,20 +136,25 @@ Preparing...                ########################################### [100%]
    1:epel-release           ########################################### [100%]
 </pre>
 
+Check it's installed:
 <pre>
 # rpm -qa | grep epel
 epel-release-6-8.noarch
 </pre>
 
 
-Creates
+The install creates two files:
 - /etc/yum.repos.d/epel.repo
 - /etc/yum.repos.d/epel-testing.repo
+<br>
 
+<h3>Python Stuff</h3>
+Now install pip to manage the python stuff:
 <pre>
 yum install -y python-pip
 </pre>
 
+Install easy_install or Python 2.7
 <pre>
 wget --no-check-certificate https://bootstrap.pypa.io/ez_setup.py
 sudo /usr/local/bin/python2.7 ez_setup.py
@@ -147,6 +173,8 @@ sudo /usr/local/bin/easy_install-2.7 pitz (by accident!)
 # sudo /usr/local/bin/easy_install-2.7 pytz
 </pre>
 
+<br>
+<h3>All Done</h3>
 Now no error message for pytz:
 
 <pre>
@@ -160,22 +188,35 @@ cqlsh>
 <br>
 <h2>Shutdown DSE & enable Search & Analytics</h2>
 
+We need to delete the default datacentre and restart the cluster in SearchAnalytics mode.
+
+Stop the service.
+
 <pre>
 #  service dse stop
 Stopping DSE daemon : dse                                  [  OK  ]
+</pre>
+Change the "SEARCH" and "ANALYTICS" flag to 1:
+<pre>
 # vi /etc/default/dse
+</pre>
+Delete the old databases:
+<pre> 
 # rm -rf /var/lib/cassandra/data/*
+</pre>
+Remove the old system.log:
+<pre>
 # rm /var/log/cassandra/system.log 
 rm: remove regular file `/var/log/cassandra/system.log'? y
 </pre>
-
-Cassandra account created:
+<br>
+Cassandra account was created by the installer:
 <pre>
 # cat /etc/passwd | grep cassandra
 cassandra:x:476:472::/var/lib/cassandra:/bin/bash
 </pre>
 
-Ulimits updated for the Cassandra user:
+Ulimits was updated by the installer for the Cassandra user:
 
 <pre>
 # cat /etc/security/limits.d/cassandra.conf
@@ -228,6 +269,7 @@ ORCL.US.ORACLE.COM
 1 row selected.
 </pre>
 
+<h2>Create HR User For The Sample Database</h2>
 Allow local User ID's to be created:
 <pre>
 SQL> alter session set "_ORACLE_SCRIPT"=true; 
@@ -245,8 +287,9 @@ $ORACLE_HOME/demo/schema/log/
 PL/SQL procedure successfully completed.
 </pre>
 
-<h3>Schema</h3>
+<h2>Investigate The HR Schema</h2>
 
+<h3>What Tables Do We Have?</h3>
 <pre>
 SQL> set lines 180
 
@@ -265,6 +308,7 @@ JOB_HISTORY
 7 rows selected.
 </pre>
 
+<h3>Table EMPLOYEES</h3>
 <pre>
 SQL> desc employees
 
@@ -283,6 +327,7 @@ SQL> desc employees
  DEPARTMENT_ID                    NUMBER(4)
 </pre>
 
+<h3>Table JOBS</h3>
 <pre>
 SQL> desc jobs
 
@@ -293,7 +338,9 @@ SQL> desc jobs
  MIN_SALARY                       NUMBER(6)
  MAX_SALARY                       NUMBER(6)
 </pre>
- 
+
+<h3>Table DEPARTMENTS</h3>
+
 <pre>
 SQL> desc departments
 
@@ -304,6 +351,8 @@ SQL> desc departments
  MANAGER_ID                       NUMBER(6)
  LOCATION_ID                       NUMBER(4)
 </pre>
+
+<h3>Table LOCATIONS</h3>
 
 <pre>
 SQL> desc locations
@@ -318,6 +367,8 @@ SQL> desc locations
  COUNTRY_ID                       CHAR(2)
 </pre>
 
+<h3>Table COUNTRIES</h3>
+
 <pre>
 SQL> desc countries
 
@@ -328,8 +379,9 @@ SQL> desc countries
  REGION_ID                        NUMBER
 </pre>
 
+<h2>Examine The HR Data</h2>
 
-We can select employees from the employees table, for example:
+In SQLPlus we can select employees from the employees table, for example:
 <pre>
 SQL> select * from employees;
 
@@ -381,7 +433,7 @@ JOB_ID     JOB_TITLE                           MIN_SALARY MAX_SALARY
 ST_MAN     Stock Manager                             5500       8500
 </pre>
 
-Who is HIS boss?
+Who is <b>HIS</b> boss?
 
 <pre>
 EMPLOYEE_ID FIRST_NAME           LAST_NAME            EMAIL                PHONE_NUMBER         HIRE_DATE JOB_ID         SALARY COMMISSION_PCT MANAGER_ID DEPARTMENT_ID
@@ -422,11 +474,14 @@ SQL> select * from regions where region_id=2;
 </pre>
 
 
+<br>
+<br>
 
+<h1>Using Spark To Read Oracle Data</h1>
+The objective of this exercise is to use the DatFrame capability introduced in Apache Spark 1.3 to load data from tables in an Oracle database (12c) via Oracle's JDBC thin driver, 
+ and generate a result set, joining tables where necessary.
 
-The objective is to use the DatFrame capability introduced in Apache Spark 1.3 to load data from tables in Oracle database (12c) using Oracle's JDBC thin driver.
- and generate a result set by joining 2 tables.
-
+<h2>Download Oracle ojdbc7.jar</h2>
 We have to add the Oracle JDBC jar file to our Spark classpath so that Spark knows how to talk to the Oracle database.
 
 You can download the ojdbc JAR file from:
@@ -434,17 +489,21 @@ You can download the ojdbc JAR file from:
 http://www.oracle.com/technetwork/database/features/jdbc/jdbc-drivers-12c-download-1958347.html
 I've used ojdbc7.jar which is certified for use with both JDK7 and JDK8
 
-To include this extension lib you can add the line in the “spark-env.sh” file. For this test we only need the driver file on our single (SparkMaster).
+<br>
+<h2>Using The Oracle JDBC Driver</h2>
+For this test we only need the jdbc driver file on our single (SparkMaster) node.
 In a bigger cluster we would need to distribute it to the slave nodes too.
 
-1. Add jars from submit command line - no good, I want it in the REPL
-./bin/spark-submit --class "SparkTest" --master local[*] --jars /fullpath/first.jar,/fullpath/second.jar /fullpath/your-program.jar
+I tried three methods of defining the Oracle JDBC driver (TL;DR - skip to method 3 ;) )
 
-2. Add --jars to command line - FAILED, did not work
+
+
+<h3>1. Add --jars to command line - FAILED, did not work</h3>
 <pre>
 $ dse spark --jars /app/oracle/downloads/ojdbc7.jar
 </pre>
-3. Add to /etc/dse/spark/spark-env.sh - SUCCESS, but deprecation warning messages
+
+<h3>2. Add to /etc/dse/spark/spark-env.sh - SUCCESS, <u><b>but</b></u> deprecation warning messages</h3>
 <pre>
  SPARK_CLASSPATH="/app/oracle/downloads/ojdbc7.jar"
 </pre>
@@ -463,11 +522,9 @@ Initializing SparkContext with MASTER: spark://127.0.0.1:7077
 WARN  2016-09-07 15:49:08,722 org.apache.spark.SparkConf: 
 SPARK_CLASSPATH was detected (set to '/app/oracle/downloads/ojdbc7.jar').
 This is deprecated in Spark 1.0+.
-
 Please instead use:
  - ./spark-submit with --driver-class-path to augment the driver classpath
- - spark.executor.extraClassPath to augment the executor classpath
-        
+ - spark.executor.extraClassPath to augment the executor classpath 
 WARN  2016-09-07 15:49:08,728 org.apache.spark.SparkConf: Setting 'spark.executor.extraClassPath' to '/app/oracle/downloads/ojdbc7.jar' as a work-around.
 WARN  2016-09-07 15:49:08,728 org.apache.spark.SparkConf: Setting 'spark.driver.extraClassPath' to '/app/oracle/downloads/ojdbc7.jar' as a work-around.
 Created spark context..
@@ -475,23 +532,25 @@ Spark context available as sc.
 Hive context available as sqlContext. Will be initialized on first use.
 </pre>
 
-<pre>
+We import some classes we'll probably need:
+<pre lang="scala">
 import com.datastax.spark.connector._
 import com.datastax.spark.connector.cql.CassandraConnector
 import org.apache.log4j.{Level, Logger}
 import org.apache.spark.{SparkConf, SparkContext}
 import java.io._
 </pre>
-
-<pre>
+<br>
+Now we can read the HR.EMPLOYEES table into a Spark DataFrame using this command:
+<pre lang="scala">
 scala> val employees = sqlContext.load("jdbc", Map("url" -> "jdbc:oracle:thin:hr/hr@localhost:1521/orcl", "dbtable" -> "hr.employees"))
 warning: there were 1 deprecation warning(s); re-run with -deprecation for details
 employees: org.apache.spark.sql.DataFrame = [EMPLOYEE_ID: decimal(6,0), FIRST_NAME: string, LAST_NAME: string, EMAIL: string, PHONE_NUMBER: string, HIRE_DATE: timestamp, JOB_ID: string, SALARY: decimal(8,2), COMMISSION_PCT: decimal(2,2), MANAGER_ID: decimal(6,0), DEPARTMENT_ID: decimal(4,0)]
 </pre>
 
-SUCCESS - but not ideal as its a deprecated 
+SUCCESS - but not ideal as it's a deprecated approach.<br><br>
 
-3. Use driver_class_path - SUCCESS
+<h3>3. Use driver_class_path - SUCCESS</h3>
 <pre>
 $ dse spark --driver-class-path /app/oracle/downloads/ojdbc7.jar -deprecation
 Welcome to
@@ -508,22 +567,27 @@ Created spark context..
 Spark context available as sc.
 Hive context available as sqlContext. Will be initialized on first use.
 </pre>
-
-<pre>
+<br>
+We import those classes again:
+<pre lang="scala">
 import com.datastax.spark.connector._
 import com.datastax.spark.connector.cql.CassandraConnector
 import org.apache.log4j.{Level, Logger}
 import org.apache.spark.{SparkConf, SparkContext}
 import java.io._
 </pre>
-
-<pre>
+<br>
+And try the data load from Oracle again - all good and no errors:
+<pre lang="scala">
 scala> val employees = sqlContext.load("jdbc", Map("url" -> "jdbc:oracle:thin:hr/hr@localhost:1521/orcl", "dbtable" -> "hr.employees"))
 warning: there were 1 deprecation warning(s); re-run with -deprecation for details
 employees: org.apache.spark.sql.DataFrame = [EMPLOYEE_ID: decimal(6,0), FIRST_NAME: string, LAST_NAME: string, EMAIL: string, PHONE_NUMBER: string, HIRE_DATE: timestamp, JOB_ID: string, SALARY: decimal(8,2), COMMISSION_PCT: decimal(2,2), MANAGER_ID: decimal(6,0), DEPARTMENT_ID: decimal(4,0)]
 </pre>
 
-<pre>
+
+<h2>Examining The DatFrame</h2>
+
+<pre lang="scala">
 scala> employees.printSchema()
 root
  |-- EMPLOYEE_ID: decimal(6,0) (nullable = false)
@@ -538,7 +602,8 @@ root
  |-- MANAGER_ID: decimal(6,0) (nullable = true)
  |-- DEPARTMENT_ID: decimal(4,0) (nullable = true)
 </pre>
-<pre>
+
+<pre lang="scala">
 scala> employees.show()
 +-----------+-----------+----------+--------+------------+--------------------+----------+--------+--------------+----------+-------------+
 |EMPLOYEE_ID| FIRST_NAME| LAST_NAME|   EMAIL|PHONE_NUMBER|           HIRE_DATE|    JOB_ID|  SALARY|COMMISSION_PCT|MANAGER_ID|DEPARTMENT_ID|
