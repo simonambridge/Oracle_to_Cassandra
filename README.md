@@ -166,7 +166,7 @@ sudo service dse start
 </pre>
 cqlsh - OK
 
-<H2>Identify SPark Master</h2>
+<H2>Identify Spark Master</h2>
 
 <pre>
 $ dse client-tool spark master-address
@@ -190,17 +190,15 @@ Copyright (c) 1982, 2014, Oracle.  All rights reserved.
 Connected to:
 Oracle Database 12c Enterprise Edition Release 12.1.0.2.0 - 64bit Production
 With the Partitioning, OLAP, Advanced Analytics and Real Application Testing options
-</pre>
 
-<pre>
 SQL> select database_name from v$database;
-</pre>
 
 DATABASE_NAME
 ----------------------
 ORCL.US.ORACLE.COM
 
 1 row selected.
+</pre>
 
 Allow local User ID's to be created:
 <pre>
