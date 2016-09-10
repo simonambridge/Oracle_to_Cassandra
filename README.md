@@ -253,11 +253,11 @@ SQL> desc employees
  COMMISSION_PCT                   NUMBER(2,2)
  MANAGER_ID                       NUMBER(6)
  DEPARTMENT_ID                    NUMBER(4)
-</pre>
 
 <pre>
 SQL> desc jobs
 </pre>
+
  Name                    Null?    Type
  ----------------------- -------- ----------------
  JOB_ID                  NOT NULL VARCHAR2(10)
@@ -266,8 +266,10 @@ SQL> desc jobs
  MAX_SALARY                       NUMBER(6)
 
  
-
+<pre>
 SQL> desc departments
+</pre>
+
  Name                    Null?    Type
  ----------------------- -------- ----------------
  DEPARTMENT_ID           NOT NULL NUMBER(4)
@@ -275,7 +277,10 @@ SQL> desc departments
  MANAGER_ID                       NUMBER(6)
  LOCATION_ID                       NUMBER(4)
 
+<pre>
 SQL> desc locations
+</pre>
+
  Name                    Null?    Type
  ----------------------- -------- ----------------
  LOCATION_ID             NOT NULL NUMBER(4)
@@ -285,7 +290,10 @@ SQL> desc locations
  STATE_PROVINCE                   VARCHAR2(25)
  COUNTRY_ID                       CHAR(2)
 
+<pre>
 SQL> desc countries
+</pre>
+
  Name                    Null?    Type
  ----------------------- -------- ----------------
  COUNTRY_ID              NOT NULL CHAR(2)
@@ -294,7 +302,9 @@ SQL> desc countries
 
 
 We can select employees from the employees table, for example:
+<pre>
 SQL> select * from employees;
+</pre>
 
 EMPLOYEE_ID FIRST_NAME           LAST_NAME            EMAIL                PHONE_NUMBER         HIRE_DATE JOB_ID         SALARY COMMISSION_PCT MANAGER_ID DEPARTMENT_ID
 ----------- -------------------- -------------------- -------------------- -------------------- --------- ---------- ---------- -------------- ---------- -------------
