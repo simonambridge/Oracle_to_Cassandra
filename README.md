@@ -223,7 +223,7 @@ PL/SQL procedure successfully completed.
 SQL> set lines 180
 
 SQL> select table_name from user_tables;
-</pre>
+
 TABLE_NAME
 ------------------------
 REGIONS
@@ -235,11 +235,11 @@ EMPLOYEES
 JOB_HISTORY
 
 7 rows selected.
-
+</pre>
 
 <pre>
 SQL> desc employees
-</pre>
+
  Name                    Null?    Type
  ----------------------- -------- ----------------
  EMPLOYEE_ID             NOT NULL NUMBER(6)
@@ -253,10 +253,10 @@ SQL> desc employees
  COMMISSION_PCT                   NUMBER(2,2)
  MANAGER_ID                       NUMBER(6)
  DEPARTMENT_ID                    NUMBER(4)
+</pre>
 
 <pre>
 SQL> desc jobs
-</pre>
 
  Name                    Null?    Type
  ----------------------- -------- ----------------
@@ -264,11 +264,10 @@ SQL> desc jobs
  JOB_TITLE               NOT NULL VARCHAR2(35)
  MIN_SALARY                       NUMBER(6)
  MAX_SALARY                       NUMBER(6)
-
+</pre>
  
 <pre>
 SQL> desc departments
-</pre>
 
  Name                    Null?    Type
  ----------------------- -------- ----------------
@@ -276,10 +275,10 @@ SQL> desc departments
  DEPARTMENT_NAME         NOT NULL VARCHAR2(30)
  MANAGER_ID                       NUMBER(6)
  LOCATION_ID                       NUMBER(4)
+</pre>
 
 <pre>
 SQL> desc locations
-</pre>
 
  Name                    Null?    Type
  ----------------------- -------- ----------------
@@ -289,16 +288,17 @@ SQL> desc locations
  CITY                    NOT NULL VARCHAR2(30)
  STATE_PROVINCE                   VARCHAR2(25)
  COUNTRY_ID                       CHAR(2)
+</pre>
 
 <pre>
 SQL> desc countries
-</pre>
 
  Name                    Null?    Type
  ----------------------- -------- ----------------
  COUNTRY_ID              NOT NULL CHAR(2)
  COUNTRY_NAME                     VARCHAR2(40)
  REGION_ID                        NUMBER
+</pre>
 
 
 We can select employees from the employees table, for example:
