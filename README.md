@@ -428,7 +428,7 @@ Welcome to
     _\ \/ _ \/ _ `/ __/  '_/
    /___/ .__/\_,_/_/ /_/\_\   version 1.6.2
       /_/
-
+ 
 Using Scala version 2.10.5 (Java HotSpot(TM) 64-Bit Server VM, Java 1.8.0_77)
 Type in expressions to have them evaluated.
 Type :help for more information.
