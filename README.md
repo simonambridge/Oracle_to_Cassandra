@@ -103,30 +103,35 @@ epel-release-6-8.noarch
 
 
 Creates
-1. /etc/yum.repos.d/epel.repo
-2. /etc/yum.repos.d/epel-testing.repo
+- /etc/yum.repos.d/epel.repo
+- /etc/yum.repos.d/epel-testing.repo
 
+<pre>
 yum install -y python-pip
-
+</pre>
+<pre>
 wget --no-check-certificate https://bootstrap.pypa.io/ez_setup.py
 sudo /usr/local/bin/python2.7 ez_setup.py
 sudo /usr/local/bin/easy_install-2.7 pip
 sudo /usr/local/bin/easy_install-2.7 pitz (by accident!)
-
+</pre>
+<pre>
 # which pip
 /usr/local/bin/pip
 # which easy_install
 /usr/local/bin/easy_install
-
+</pre>
+<pre>
 # sudo /usr/local/bin/easy_install-2.7 pytz
-
+</pre>
 Now no error message for pytz:
-
+<pre>
 # cqlsh
 Connected to Test Cluster at 127.0.0.1:9042.
 [cqlsh 5.0.1 | Cassandra 3.0.7.1159 | DSE 5.0.1 | CQL spec 3.4.0 | Native protocol v4]
 Use HELP for help.
 cqlsh> 
+</pre>
 
 <h2>Shutdown DSE & enable Search & Analytics</h2>
 
