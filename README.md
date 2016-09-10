@@ -413,14 +413,15 @@ In a bigger cluster we would need to distribute it to the slave nodes too.
 ./bin/spark-submit --class "SparkTest" --master local[*] --jars /fullpath/first.jar,/fullpath/second.jar /fullpath/your-program.jar
 
 2. Add --jars to command line - FAILED, did not work
-
-$ dse spark --jars /app/oracle/downloads/ojdbc7.jar
-
-3. Add to /etc/dse/spark/spark-env.sh - SUCCESS, but deprecation warning messages
-
- SPARK_CLASSPATH="/app/oracle/downloads/ojdbc7.jar"
 <pre>
-[oracle@demo ~]$ dse spark
+$ dse spark --jars /app/oracle/downloads/ojdbc7.jar
+</pre>
+3. Add to /etc/dse/spark/spark-env.sh - SUCCESS, but deprecation warning messages
+<pre>
+ SPARK_CLASSPATH="/app/oracle/downloads/ojdbc7.jar"
+</pre>
+<pre>
+$ dse spark
 Welcome to
       ____              __
      / __/__  ___ _____/ /__
@@ -446,6 +447,7 @@ Created spark context..
 Spark context available as sc.
 Hive context available as sqlContext. Will be initialized on first use.
 </pre>
+
 <pre>
 import com.datastax.spark.connector._
 import com.datastax.spark.connector.cql.CassandraConnector
@@ -453,11 +455,13 @@ import org.apache.log4j.{Level, Logger}
 import org.apache.spark.{SparkConf, SparkContext}
 import java.io._
 </pre>
+
 <pre>
 scala> val employees = sqlContext.load("jdbc", Map("url" -> "jdbc:oracle:thin:hr/hr@localhost:1521/orcl", "dbtable" -> "hr.employees"))
 warning: there were 1 deprecation warning(s); re-run with -deprecation for details
 employees: org.apache.spark.sql.DataFrame = [EMPLOYEE_ID: decimal(6,0), FIRST_NAME: string, LAST_NAME: string, EMAIL: string, PHONE_NUMBER: string, HIRE_DATE: timestamp, JOB_ID: string, SALARY: decimal(8,2), COMMISSION_PCT: decimal(2,2), MANAGER_ID: decimal(6,0), DEPARTMENT_ID: decimal(4,0)]
 </pre>
+
 SUCCESS - but not ideal as its a deprecated 
 
 3. Use driver_class_path - SUCCESS
@@ -486,6 +490,7 @@ import org.apache.log4j.{Level, Logger}
 import org.apache.spark.{SparkConf, SparkContext}
 import java.io._
 </pre>
+
 <pre>
 scala> val employees = sqlContext.load("jdbc", Map("url" -> "jdbc:oracle:thin:hr/hr@localhost:1521/orcl", "dbtable" -> "hr.employees"))
 warning: there were 1 deprecation warning(s); re-run with -deprecation for details
