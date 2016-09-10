@@ -1,4 +1,4 @@
-# Oracle_to_Cassandra
+# Migrating Relational Data From Oracle To Cassandra
 
 <H1>WORK IN PROGRESS - come back later</H1>
 
@@ -428,7 +428,6 @@ Welcome to
     _\ \/ _ \/ _ `/ __/  '_/
    /___/ .__/\_,_/_/ /_/\_\   version 1.6.2
       /_/
- 
 Using Scala version 2.10.5 (Java HotSpot(TM) 64-Bit Server VM, Java 1.8.0_77)
 Type in expressions to have them evaluated.
 Type :help for more information.
@@ -473,7 +472,6 @@ Welcome to
     _\ \/ _ \/ _ `/ __/  '_/
    /___/ .__/\_,_/_/ /_/\_\   version 1.6.2
       /_/
-
 Using Scala version 2.10.5 (Java HotSpot(TM) 64-Bit Server VM, Java 1.8.0_77)
 Type in expressions to have them evaluated.
 Type :help for more information.
@@ -555,18 +553,18 @@ your data, decide what queries you want to run against it, then index it to the 
 Remember that in a relational database maintaining those indexes is very expensive operation that becomes more expensive as the volume of data grows.
 In contrast
 
-1. Query all employees on EMPLOYEE_ID
-2. Query all departments, optionally returning employees by department
-3. Query all jobs, optionally returning  employees by job
-4. Query all managers, optionally returning  employees by manager
+- Query all employees on EMPLOYEE_ID
+- Query all departments, optionally returning employees by department
+- Query all jobs, optionally returning  employees by job
+- Query all managers, optionally returning  employees by manager
 
 In Cassandra we will create the following tables:
-1. 1 table for employees, similar to HR.EMPLOYEES but without the foreign keys to JOB_ID, MANAGER_ID and DEPARTMENT_ID. 
+- 1 table for employees, similar to HR.EMPLOYEES but without the foreign keys to JOB_ID, MANAGER_ID and DEPARTMENT_ID. 
    The original DEPARTMENTS table has a FK MANAGER_ID to the EMPLOYEES table, so we will also add a clustering column MANAGES_DEPT_ID so that we can identify all departments for which an employee is a manager
    We will not make this clustering column part of the partitioning primary key because we may want to search on 
-2. We will replace the HR.DEPARTMENTS lookup table - we will use EMPLOYEES_BY_DEPARTMENT with a PK on DEPARTMENT_ID, clustered on EMPLOYEE_ID
-3. We will replace the HR.JOBS lookup table - we will use EMPLOYEES_BY_JOB with a PK on JOB_ID, clustered on EMPLOYEE_ID
-4. We will replace the FK on MANAGER_ID in the EMPLOYEES table - instead we will use an EMPLOYEES_BY_MANAGER table with a PK on MANAGER, clustered on EMPLOYEE_ID
+- We will replace the HR.DEPARTMENTS lookup table - we will use EMPLOYEES_BY_DEPARTMENT with a PK on DEPARTMENT_ID, clustered on EMPLOYEE_ID
+- We will replace the HR.JOBS lookup table - we will use EMPLOYEES_BY_JOB with a PK on JOB_ID, clustered on EMPLOYEE_ID
+- We will replace the FK on MANAGER_ID in the EMPLOYEES table - instead we will use an EMPLOYEES_BY_MANAGER table with a PK on MANAGER, clustered on EMPLOYEE_ID
 
 <pre>
 CREATE KEYSPACE IF NOT EXISTS HR WITH REPLICATION = {'class': 'SimpleStrategy', 'replication_factor': 1 };
