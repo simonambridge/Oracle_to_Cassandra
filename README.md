@@ -304,7 +304,6 @@ SQL> desc countries
 We can select employees from the employees table, for example:
 <pre>
 SQL> select * from employees;
-</pre>
 
 EMPLOYEE_ID FIRST_NAME           LAST_NAME            EMAIL                PHONE_NUMBER         HIRE_DATE JOB_ID         SALARY COMMISSION_PCT MANAGER_ID DEPARTMENT_ID
 ----------- -------------------- -------------------- -------------------- -------------------- --------- ---------- ---------- -------------- ---------- -------------
@@ -315,11 +314,12 @@ EMPLOYEE_ID FIRST_NAME           LAST_NAME            EMAIL                PHONE
         124 Kevin                Mourgos              KMOURGOS             650.123.5234         16-NOV-07 ST_MAN           5800                       100            50
         125 Julia                Nayer                JNAYER               650.124.1214         16-JUL-05 ST_CLERK         3200                       120            50
         126 Irene                Mikkilineni          IMIKKILI             650.124.1224         28-SEP-06 ST_CLERK         2700                       120            50
-
+</pre>
 
 
 We want to focus on employees reporting to a manager with ID=121:
 
+<pre>
 SQL> select * from employees where manager_id=121;
 
 EMPLOYEE_ID FIRST_NAME           LAST_NAME            EMAIL                PHONE_NUMBER         HIRE_DATE JOB_ID         SALARY COMMISSION_PCT MANAGER_ID DEPARTMENT_ID
@@ -332,47 +332,52 @@ EMPLOYEE_ID FIRST_NAME           LAST_NAME            EMAIL                PHONE
         185 Alexis               Bull                 ABULL                650.509.2876         20-FEB-05 SH_CLERK         4100                       121            50
         186 Julia                Dellinger            JDELLING             650.509.3876         24-JUN-06 SH_CLERK         3400                       121            50
         187 Anthony              Cabrio               ACABRIO              650.509.4876         07-FEB-07 SH_CLERK         3000                       121            50
-
+</pre>
 
 Who is that manager?
 
+<pre>
 SQL> select * from employees where employee_id=121;
 
 EMPLOYEE_ID FIRST_NAME           LAST_NAME            EMAIL                PHONE_NUMBER         HIRE_DATE JOB_ID         SALARY COMMISSION_PCT MANAGER_ID DEPARTMENT_ID
 ----------- -------------------- -------------------- -------------------- -------------------- --------- ---------- ---------- -------------- ---------- -------------
         121 Adam                 Fripp                AFRIPP               650.123.2234         10-APR-05 ST_MAN           8200                       100            50
+</pre>
 
 What is HIS job?
+<pre>
 SQL> select * from jobs where job_id='ST_MAN';
 
 JOB_ID     JOB_TITLE                           MIN_SALARY MAX_SALARY
 ---------- ----------------------------------- ---------- ----------
 ST_MAN     Stock Manager                             5500       8500
-
+</pre>
 
 Who is HIS boss?
 
+<pre>
 EMPLOYEE_ID FIRST_NAME           LAST_NAME            EMAIL                PHONE_NUMBER         HIRE_DATE JOB_ID         SALARY COMMISSION_PCT MANAGER_ID DEPARTMENT_ID
 ----------- -------------------- -------------------- -------------------- -------------------- --------- ---------- ---------- -------------- ---------- -------------
         100 Steven               King                 SKING                515.123.4567         17-JUN-03 AD_PRES         24000                                      90
-
+</pre>
 They work in Department=50 - what is that?
-
+<pre>
 SQL> select * from departments where department_id=50;
 
 DEPARTMENT_ID DEPARTMENT_NAME                MANAGER_ID LOCATION_ID
 ------------- ------------------------------ ---------- -----------
            50 Shipping                              121        1500
-
+</pre>
 Where is location=1500?
-
+<pre>
 SQL> select * from locations where location_id=1500;
 
 LOCATION_ID STREET_ADDRESS                           POSTAL_CODE  CITY                           STATE_PROVINCE            CO
 ----------- ---------------------------------------- ------------ ------------------------------ ------------------------- --
        1500 2011 Interiors Blvd                      99236        South San Francisco            California                US
-
+</pre>
 What country is that in?
+<pre>
 SQL> select * from countries where country_id='US';
 
 CO COUNTRY_NAME                              REGION_ID
@@ -386,7 +391,7 @@ SQL> select * from regions where region_id=2;
  REGION_ID REGION_NAME
 ---------- -------------------------
          2 Americas
-
+</pre>
 
 
 
@@ -414,7 +419,7 @@ $ dse spark --jars /app/oracle/downloads/ojdbc7.jar
 3. Add to /etc/dse/spark/spark-env.sh - SUCCESS, but deprecation warning messages
 
  SPARK_CLASSPATH="/app/oracle/downloads/ojdbc7.jar"
-
+<pre>
 [oracle@demo ~]$ dse spark
 Welcome to
       ____              __
@@ -440,22 +445,23 @@ WARN  2016-09-07 15:49:08,728 org.apache.spark.SparkConf: Setting 'spark.driver.
 Created spark context..
 Spark context available as sc.
 Hive context available as sqlContext. Will be initialized on first use.
-
+</pre>
+<pre>
 import com.datastax.spark.connector._
 import com.datastax.spark.connector.cql.CassandraConnector
 import org.apache.log4j.{Level, Logger}
 import org.apache.spark.{SparkConf, SparkContext}
 import java.io._
-
-
+</pre>
+<pre>
 scala> val employees = sqlContext.load("jdbc", Map("url" -> "jdbc:oracle:thin:hr/hr@localhost:1521/orcl", "dbtable" -> "hr.employees"))
 warning: there were 1 deprecation warning(s); re-run with -deprecation for details
 employees: org.apache.spark.sql.DataFrame = [EMPLOYEE_ID: decimal(6,0), FIRST_NAME: string, LAST_NAME: string, EMAIL: string, PHONE_NUMBER: string, HIRE_DATE: timestamp, JOB_ID: string, SALARY: decimal(8,2), COMMISSION_PCT: decimal(2,2), MANAGER_ID: decimal(6,0), DEPARTMENT_ID: decimal(4,0)]
-
+</pre>
 SUCCESS - but not ideal as its a deprecated 
 
 3. Use driver_class_path - SUCCESS
-
+<pre>
 $ dse spark --driver-class-path /app/oracle/downloads/ojdbc7.jar -deprecation
 Welcome to
       ____              __
@@ -471,17 +477,22 @@ Initializing SparkContext with MASTER: spark://127.0.0.1:7077
 Created spark context..
 Spark context available as sc.
 Hive context available as sqlContext. Will be initialized on first use.
+</pre>
 
+<pre>
 import com.datastax.spark.connector._
 import com.datastax.spark.connector.cql.CassandraConnector
 import org.apache.log4j.{Level, Logger}
 import org.apache.spark.{SparkConf, SparkContext}
 import java.io._
-
+</pre>
+<pre>
 scala> val employees = sqlContext.load("jdbc", Map("url" -> "jdbc:oracle:thin:hr/hr@localhost:1521/orcl", "dbtable" -> "hr.employees"))
 warning: there were 1 deprecation warning(s); re-run with -deprecation for details
 employees: org.apache.spark.sql.DataFrame = [EMPLOYEE_ID: decimal(6,0), FIRST_NAME: string, LAST_NAME: string, EMAIL: string, PHONE_NUMBER: string, HIRE_DATE: timestamp, JOB_ID: string, SALARY: decimal(8,2), COMMISSION_PCT: decimal(2,2), MANAGER_ID: decimal(6,0), DEPARTMENT_ID: decimal(4,0)]
+</pre>
 
+<pre>
 scala> employees.printSchema()
 root
  |-- EMPLOYEE_ID: decimal(6,0) (nullable = false)
@@ -495,7 +506,8 @@ root
  |-- COMMISSION_PCT: decimal(2,2) (nullable = true)
  |-- MANAGER_ID: decimal(6,0) (nullable = true)
  |-- DEPARTMENT_ID: decimal(4,0) (nullable = true)
-
+</pre>
+<pre>
 scala> employees.show()
 +-----------+-----------+----------+--------+------------+--------------------+----------+--------+--------------+----------+-------------+
 |EMPLOYEE_ID| FIRST_NAME| LAST_NAME|   EMAIL|PHONE_NUMBER|           HIRE_DATE|    JOB_ID|  SALARY|COMMISSION_PCT|MANAGER_ID|DEPARTMENT_ID|
@@ -522,7 +534,7 @@ scala> employees.show()
 |        119|      Karen|Colmenares|KCOLMENA|515.127.4566|2007-08-09 23:00:...|  PU_CLERK| 2500.00|          null|       114|           30|
 +-----------+-----------+----------+--------+------------+--------------------+----------+--------+--------------+----------+-------------+
 only showing top 20 rows
-
+</pre>
 
 Cassandra Data Model
 --------------------
@@ -551,13 +563,14 @@ In Cassandra we will create the following tables:
 3. We will replace the HR.JOBS lookup table - we will use EMPLOYEES_BY_JOB with a PK on JOB_ID, clustered on EMPLOYEE_ID
 4. We will replace the FK on MANAGER_ID in the EMPLOYEES table - instead we will use an EMPLOYEES_BY_MANAGER table with a PK on MANAGER, clustered on EMPLOYEE_ID
 
+<pre>
 CREATE KEYSPACE IF NOT EXISTS HR WITH REPLICATION = {'class': 'SimpleStrategy', 'replication_factor': 1 };
 USE HR;
-
+</pre>
 This table will store information on employees, and for each employee there is a clustering column for the department(s) managed by that employee.
 
 If we do it like this then all the columns except the partition key (EMPLOYEE_ID) will be part of the clustered record under MANAGES_DEPT_ID:
-
+<pre>
 DROP TABLE IF EXISTS EMPLOYEES;
 CREATE TABLE employees (
  EMPLOYEE_ID            	bigint,
@@ -571,9 +584,9 @@ CREATE TABLE employees (
  MANAGES_DEPT_ID     		bigint,
  MANAGES_DEPT_NAME	        text,
  PRIMARY KEY ((EMPLOYEE_ID), MANAGES_DEPT_ID));
-
+</pre>
 However, for each employee their first name, last name, email address etc is static data - so we can define them as static columns that belong to the partition key
-
+<pre>
 DROP TABLE IF EXISTS EMPLOYEES;
 CREATE TABLE employees (
  EMPLOYEE_ID            	bigint,
@@ -587,10 +600,10 @@ CREATE TABLE employees (
  MANAGES_DEPT_ID     		bigint,
  MANAGES_DEPT_NAME	        text,
  PRIMARY KEY ((EMPLOYEE_ID), MANAGES_DEPT_ID));
-
+</pre>
 
 Alternatively we can move the manager data out of the EMPLOYEES table and use the EMPLOYEES table purely for employee personal data and put the department manager details in another table altogether.
-
+<pre>
 DROP TABLE IF EXISTS EMPLOYEES;
 CREATE TABLE employees (
  EMPLOYEE_ID            	bigint,
@@ -602,7 +615,8 @@ CREATE TABLE employees (
  SALARY                 	decimal,
  COMMISSION_PCT         	decimal,
  PRIMARY KEY (EMPLOYEE_ID);
-
+</pre>
+<pre>
 DROP TABLE IF EXISTS EMPLOYEES;
 CREATE TABLE employees (
  EMPLOYEE_ID            	bigint,
@@ -614,13 +628,14 @@ CREATE TABLE employees (
  SALARY                 	decimal,
  COMMISSION_PCT         	decimal,
  PRIMARY KEY (EMPLOYEE_ID);
+</pre>
 
 
 
 
 
-
-test data
+<H1>test data</H1>
+<pre>
 truncate table employees;
 insert into employees (employee_id, first_name, manages_dept_id, manages_dept_name) values (1,'simon',101,'sales');
 insert into employees (employee_id, first_name, manages_dept_id, manages_dept_name) values (2,'bill',102,'sales');
@@ -633,8 +648,8 @@ insert into employees (employee_id, first_name, manages_dept_id, manages_dept_na
 insert into employees (employee_id, first_name, manages_dept_id, manages_dept_name) values (9,'steve',109,'sales');
 insert into employees (employee_id, first_name, manages_dept_id, manages_dept_name) values (10,'julia',110,'sales');
 
-
 insert into employees (employee_id, first_name, manages_dept_id, manages_dept_name) values (1,'simon',111,'pre-sales');
+</pre>
 
 
 
