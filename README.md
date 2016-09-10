@@ -5,7 +5,7 @@
 add gateway in /etc/sysconfig/network
 eth8 in /etc/sysconfig/network-scripts
 
-
+<pre>
 DEVICE=eth8
 ONBOOT=yes
 TYPE=Ethernet
@@ -14,33 +14,41 @@ NETMASK=255.255.255.0
 GATEWAY=171.28.136.254
 PERRDNS=yes
 PEERROUTES=yes
+</pre>
 
 service network restart
 
 Add /etc/yum.repos.d/datastax.repo
+<pre>
 [datastax] 
 name = DataStax Repo for DataStax Enterprise
 baseurl=https://datastaxrepo_gmail.com:utJVKEg4lKeaWTX@rpm.datastax.com/enterprise
 enabled=1
 gpgcheck=0
+</pre>
 
 rpm --import http://rpm.datastax.com/rpm/repo_key 
 
-
+<pre>
 sudo yum install dse-full-5.0.1-1
 sudo yum install opscenter --> 6.0.2.1
 sudo yum install datastax-agent --> 6.0.2.1
-
+</pre>
 
 install guest additions
 restart
+<pre>
 killall VBoxClient
 VBoxClient-all
+</pre>
+
+<h2>cqlsh / Python Problem</h2>
 
 cqlsh
 "No appropriate python interpreter found"
 
 http://tecadmin.net/install-python-2-7-on-centos-rhel/#
+<pre>
 yum install gcc
 cd /usr/src
 wget https://www.python.org/ftp/python/2.7.12/Python-2.7.12.tgz
@@ -48,16 +56,19 @@ tar xzf Python-2.7.12.tgz
 cd Python-2.7.12
 ./configure
 make altinstall
+</pre>
 
+<pre>
 # python2.7 --version
 Python 2.7.12
 ("python --version" still brings up 2.6.6)
-
+</pre>
 cqlsh now works
 
 
-
-
+<h2>Install EPEL And Other Pre-Reqs</h2>
+Time zone error starting cqlsh:
+<pre>
 # cqlsh
 Warning: Timezone defined and 'pytz' module for timezone conversion not installed. Timestamps will be displayed in UTC timezone.
 
@@ -65,26 +76,30 @@ Connected to Test Cluster at 127.0.0.1:9042.
 [cqlsh 5.0.1 | Cassandra 3.0.7.1159 | DSE 5.0.1 | CQL spec 3.4.0 | Native protocol v4]
 Use HELP for help.
 cqlsh> 
+</pre>
 
+<pre>
 http://sharadchhetri.com/2014/05/30/install-pip-centos-rhel-ubuntu-debian/
 yum install wget
+</pre>
 
-
+<pre>
 # cat /etc/redhat-release 
 Red Hat Enterprise Linux Server release 6.8 (Santiago)
+</pre>
 
+<pre>
 # rpm -ivh http://dl.fedoraproject.org/pub/epel/6/x86_64/epel-release-6-8.noarch.rpm
 Retrieving http://dl.fedoraproject.org/pub/epel/6/x86_64/epel-release-6-8.noarch.rpm
 warning: /var/tmp/rpm-tmp.X7MF42: Header V3 RSA/SHA256 Signature, key ID 0608b895: NOKEY
 Preparing...                ########################################### [100%]
    1:epel-release           ########################################### [100%]
+</pre>
 
+<pre>
 # rpm -qa | grep epel
 epel-release-6-8.noarch
-
-To remove v7 incorrectly applied:
-rpm -e epel_release
-rm -rf /var/cache/yum/x86_64/6Server/epel
+</pre>
 
 
 Creates
@@ -113,43 +128,54 @@ Connected to Test Cluster at 127.0.0.1:9042.
 Use HELP for help.
 cqlsh> 
 
-Shutdown DSE & enable Analytics
+<h2>Shutdown DSE & enable Search & Analytics</h2>
 
+<pre>
 #  service dse stop
 Stopping DSE daemon : dse                                  [  OK  ]
 # vi /etc/default/dse
 # rm -rf /var/lib/cassandra/data/*
 # rm /var/log/cassandra/system.log 
 rm: remove regular file `/var/log/cassandra/system.log'? y
+</pre>
 
 Cassandra account created:
+<pre>
 # cat /etc/passwd | grep cassandra
 cassandra:x:476:472::/var/lib/cassandra:/bin/bash
+</pre>
 
 Ulimits updated for the Cassandra user:
+<pre>
 # cat /etc/security/limits.d/cassandra.conf
 
 cassandra - memlock unlimited
 cassandra - nofile 100000
 cassandra - nproc 32768
 cassandra - as unlimited
+</pre>
 
+<pre>
 sudo su - cassandra
 sudo service dse start
+</pre>
 cqlsh - OK
 
+<H2>Identify SPark Master</h2>
+
+<pre>
 $ dse client-tool spark master-address
 spark://127.0.0.1:7077
- 
+</pre> 
 
 ??pip install cassandra-driver??
 
 
 
 
-Oracle Database
----------------
+<h2>Oracle Database</h2>
 
+<pre>
 $ sqlplus / as sysdba
 
 SQL*Plus: Release 12.1.0.2.0 Production on Mon Sep 5 05:25:42 2016
@@ -159,9 +185,11 @@ Copyright (c) 1982, 2014, Oracle.  All rights reserved.
 Connected to:
 Oracle Database 12c Enterprise Edition Release 12.1.0.2.0 - 64bit Production
 With the Partitioning, OLAP, Advanced Analytics and Real Application Testing options
+</pre>
 
-
+<pre>
 SQL> select database_name from v$database;
+</pre>
 
 DATABASE_NAME
 ----------------------
@@ -170,8 +198,12 @@ ORCL.US.ORACLE.COM
 1 row selected.
 
 Allow local User ID's to be created:
+<pre>
 SQL> alter session set "_ORACLE_SCRIPT"=true; 
+</pre>
 
+Create HR User
+<pre>
 @?/demo/schema/human_resources/hr_main.sql
 hr
 users
@@ -180,14 +212,15 @@ Admin123
 $ORACLE_HOME/demo/schema/log/
 
 PL/SQL procedure successfully completed.
+</pre>
 
-Schema
-------
+<h3>Schema</h3>
 
+<pre>
 SQL> set lines 180
 
 SQL> select table_name from user_tables;
-
+</pre>
 TABLE_NAME
 ------------------------
 REGIONS
@@ -201,8 +234,9 @@ JOB_HISTORY
 7 rows selected.
 
 
-
+<pre>
 SQL> desc employees
+</pre>
  Name                    Null?    Type
  ----------------------- -------- ----------------
  EMPLOYEE_ID             NOT NULL NUMBER(6)
@@ -216,8 +250,11 @@ SQL> desc employees
  COMMISSION_PCT                   NUMBER(2,2)
  MANAGER_ID                       NUMBER(6)
  DEPARTMENT_ID                    NUMBER(4)
- 
+</pre>
+
+<pre>
 SQL> desc jobs
+</pre>
  Name                    Null?    Type
  ----------------------- -------- ----------------
  JOB_ID                  NOT NULL VARCHAR2(10)
