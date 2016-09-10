@@ -1,8 +1,13 @@
 # Migrating Relational Data From Oracle To Cassandra
 
-<H1>WORK IN PROGRESS - come back later</H1>
+<H1>WORK IN PROGRESS - come back later</H1>  
 
-add gateway in /etc/sysconfig/network
+--
+<br>
+<H1>Set Up Red Hat</H1>
+<br>
+<h2>Add gateway in /etc/sysconfig/network</h2>
+
 eth8 in /etc/sysconfig/network-scripts
 
 <pre>
@@ -16,9 +21,31 @@ PERRDNS=yes
 PEERROUTES=yes
 </pre>
 
+<pre>
 service network restart
+</pre>
 
-Add /etc/yum.repos.d/datastax.repo
+<br>
+<h2>Check the version of Red Hat</h2>
+<pre>
+# cat /etc/redhat-release 
+Red Hat Enterprise Linux Server release 6.8 (Santiago)
+</pre>
+
+
+<br>
+<H2>Fix VBox Shared Clipboard</H2>
+install guest additions
+restart
+<pre>
+killall VBoxClient
+VBoxClient-all
+</pre>
+
+<br>
+<H1>Set Up DatStax Components</H1>
+<br>
+<h2>Add /etc/yum.repos.d/datastax.repo</H2>
 <pre>
 [datastax] 
 name = DataStax Repo for DataStax Enterprise
@@ -29,20 +56,16 @@ gpgcheck=0
 
 rpm --import http://rpm.datastax.com/rpm/repo_key 
 
+<br>
+<h2>Install DSE, OpsCenter & DataStax Agent</H2>
 <pre>
 sudo yum install dse-full-5.0.1-1
 sudo yum install opscenter --> 6.0.2.1
 sudo yum install datastax-agent --> 6.0.2.1
 </pre>
 
-install guest additions
-restart
-<pre>
-killall VBoxClient
-VBoxClient-all
-</pre>
-
-<h2>cqlsh / Python Problem</h2>
+<br>
+<H2>cqlsh / Python Problem</h2>
 
 cqlsh
 "No appropriate python interpreter found"
@@ -61,12 +84,13 @@ make altinstall
 <pre>
 # python2.7 --version
 Python 2.7.12
-("python --version" still brings up 2.6.6)
 </pre>
+("python --version" still brings up 2.6.6)
 cqlsh now works
 
 
-<h2>Install EPEL And Other Pre-Reqs</h2>
+<br>
+<h2>Install EPEL And Other Pre-Reqs (mostly Python stuff)</h2>
 Time zone error starting cqlsh:
 <pre>
 # cqlsh
@@ -81,11 +105,6 @@ cqlsh>
 <pre>
 http://sharadchhetri.com/2014/05/30/install-pip-centos-rhel-ubuntu-debian/
 yum install wget
-</pre>
-
-<pre>
-# cat /etc/redhat-release 
-Red Hat Enterprise Linux Server release 6.8 (Santiago)
 </pre>
 
 <pre>
@@ -109,22 +128,27 @@ Creates
 <pre>
 yum install -y python-pip
 </pre>
+
 <pre>
 wget --no-check-certificate https://bootstrap.pypa.io/ez_setup.py
 sudo /usr/local/bin/python2.7 ez_setup.py
 sudo /usr/local/bin/easy_install-2.7 pip
 sudo /usr/local/bin/easy_install-2.7 pitz (by accident!)
 </pre>
+
 <pre>
 # which pip
 /usr/local/bin/pip
 # which easy_install
 /usr/local/bin/easy_install
 </pre>
+
 <pre>
 # sudo /usr/local/bin/easy_install-2.7 pytz
 </pre>
+
 Now no error message for pytz:
+
 <pre>
 # cqlsh
 Connected to Test Cluster at 127.0.0.1:9042.
@@ -133,6 +157,7 @@ Use HELP for help.
 cqlsh> 
 </pre>
 
+<br>
 <h2>Shutdown DSE & enable Search & Analytics</h2>
 
 <pre>
@@ -151,6 +176,7 @@ cassandra:x:476:472::/var/lib/cassandra:/bin/bash
 </pre>
 
 Ulimits updated for the Cassandra user:
+
 <pre>
 # cat /etc/security/limits.d/cassandra.conf
 
@@ -166,6 +192,7 @@ sudo service dse start
 </pre>
 cqlsh - OK
 
+<br>
 <H2>Identify Spark Master</h2>
 
 <pre>
@@ -176,10 +203,11 @@ spark://127.0.0.1:7077
 ??pip install cassandra-driver??
 
 
+<br>
+<h1>Oracle Database</h1>
 
-
-<h2>Oracle Database</h2>
-
+<br>
+<h2>Check Database Name</h2>
 <pre>
 $ sqlplus / as sysdba
 
