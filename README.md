@@ -28,13 +28,11 @@ Delete this file then reboot.
 # rm /etc/udev/rules.d/70-persistent-net.rules
 </pre>
 <br>
-
 Now go to the directory containing the NIC config scripts:
 <pre>
 # cd /etc/sysconfig/network-scripts/
 </pre>
 <br>
-
 There is a file in there for eth8 (!)
 <pre>
 # ls ifcfg*
