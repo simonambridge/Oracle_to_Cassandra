@@ -64,7 +64,7 @@ LAST_CONNECT=1470844728
 </pre>
 <br>
 
-Change it to this (put your gateway address in there):
+Change it to this (we're using the VirtualBox gateway at 10.0.2.2 - thanks to @justinholmes :) ) gateway address in there):
 
 <pre>
 DEVICE=eth0
@@ -76,7 +76,7 @@ IPV4_FAILURE_FATAL=yes
 IPV6INIT=no
 HWADDR=08:00:27:B7:44:21
 NETMASK=255.255.255.0
-GATEWAY=171.28.136.254
+GATEWAY=10.0.2.2
 PEERDNS=yes
 PEERROUTES=yes
 
