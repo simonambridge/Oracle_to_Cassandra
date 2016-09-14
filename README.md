@@ -850,7 +850,7 @@ In my Oracle SampleAppv607 VM Firefox downloaded this to /app/oracle/downloads/
 For this test we only need the jdbc driver file on our single (SparkMaster) node.
 In a bigger cluster we would need to distribute it to the slave nodes too.
 
-<h3>3. Update Executor Path For ojdbc7.jar In spark-defaults.conf</h3>
+<h3>Update Executor Path For ojdbc7.jar In spark-defaults.conf</h3>
 Add the classpath for the ojdbc7.jar file for the executors (the path is supplied to the driver on the command line at run time).
 <pre>
 # vi /etc/dse/spark/spark-defaults.conf
@@ -865,7 +865,7 @@ spark.executor.extraClassPath = /app/oracle/downloads/ojdbc7.jar
 <pre>
 $ sudo service dse stop
 $ sudo service dse start
-<pre>
+</pre>
 
 
 <h2>Start The Spark REPL</h2>
