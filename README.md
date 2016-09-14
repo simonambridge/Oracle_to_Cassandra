@@ -1,28 +1,39 @@
 # Migrating Relational Data From Oracle To Cassandra
 
 <H1>WORK IN PROGRESS - come back later</H1>  
+The objective of this exercise is to demonstrate how to migrate data from Oracle to Cassandra. I'll be using the DatFrame capability introduced in Apache Spark 1.3 to load data from tables in an Oracle database (12c) via Oracle's JDBC thin driver, to generate a result set, joining tables where necessary.
+The data will then be saved to Cassandra.
+ 
+<h2>Pre-requisites</h2>
+<h3> DataStax Enterprise (release 5.0.2 at time of publication)</h3>
+You'll need a working installation of DataStax Enterprise.
 
+- Ubuntu/Debian - https://docs.datastax.com/en/datastax_enterprise/5.0/datastax_enterprise/install/installDEBdse.html
+- Red Hat/Fedora/CentOS/Oracle Linux - https://docs.datastax.com/en/datastax_enterprise/5.0/datastax_enterprise/install/installRHELdse.html
+
+To setup your environment, you'll also need the following resources:
+
+- Python 2.7
+- For Red Hat, CentOS and Fedora, install EPEL (Extra Packages for Enterprise Linux).
+- An Oracle database:
+ - In my example the database name is orcl
+ - A running Oracle tns listener. In my example I'm using the default port of 1521.
+ - You are able to make a tns connection to the Oracle database e.g. <b>"sqlplus user/password@service_name"</b>.
+- The Oracle thin JDBC driver. You can download the ojdbc JAR file from:
+http://www.oracle.com/technetwork/database/features/jdbc/jdbc-drivers-12c-download-1958347.html
+I've used ojdbc7.jar which is certified for use with both JDK7 and JDK8
+In my 12c Oracle VM Firefox this downloaded to /app/oracle/downloads/ so you'll see the path referenced in the instructions below.
+
+
+As we will connect from Spark, using the Oracle jdbc driver, to the "orcl" database on TNS port 1521, all these components must be working correctly.
+<br>
+
+Now on to installing DataStax Enterprise and playing with some data!
+<br>
 --
-<br>
-<H2>Fix VBox Shared Clipboard</H2>
-My clipboard didn't seem to work but this fixes it.
-
-In Virtual Box mount the Guest Additions CD and run it when prompted for the root password.
-
-Restart the machine. 
-
-Then:
-<pre>
-# killall VBoxClient
-# VBoxClient-all
-</pre>
-I find that I have to enable the bidirectional clipboard I have to run the last two commands every time I start the machine.
-
-<br>
-<br>
-
 <H1>Set Up DataStax Components</H1>
 <br>
+DSE installation instructions for DSE are provided at the top of this doc. I'll show the instructions for Red Hat/CentOS/Fedora here. I'm using an Oracle Enterprise Linux VirtualBox instance.
 <h2>Add The DataStax Repo</H2>
 As root create ```/etc/yum.repos.d/datastax.repo```
 <pre># vi /etc/yum.repos.d/datastax.repo
@@ -117,24 +128,37 @@ OK, let's go look at our source data in the Oracle database.
 
 <br>
 <h1>Oracle Database</h1>
-
+We're going to create our source data for this exercise using the scripts supplied by Oracle. 
+We'll use the demo HR schema. 
 <br>
 <h2>Create HR User For The Sample Database</h2>
-Allow local User ID's to be created:
+Log into SQLPlus as the sys or system user:
+<pre>
+$ sqlplus / as sysdba
+
+SQL*Plus: Release 12.1.0.2.0 Production on Wed Sep 14 02:57:42 2016
+
+Copyright (c) 1982, 2014, Oracle.  All rights reserved.
+...
+SQL> 
+</pre>
+<h3>Set _Oracle_SCRIPT</h3>
+Run this command to allow local User ID's to be created:
 <pre>
 SQL> alter session set "_ORACLE_SCRIPT"=true; 
 </pre>
 
-Create HR User using the Oracle-supplied scripts:
+<h3>Create HR User</h3>
+Create the HR user by using the Oracle-supplied script. The "@?" is a substitute for $ORACLE_HOME.
 <pre>
-@?/demo/schema/human_resources/hr_main.sql
+SQL> @?/demo/schema/human_resources/hr_main.sql
 </pre>
 
-Respond with
+Respond with these parameters
 - hr
 - users
 - temp
-- <your sys password>
+- [your sys password]
 - $ORACLE_HOME/demo/schema/log/
 
 You should see
@@ -146,8 +170,11 @@ PL/SQL procedure successfully completed.
 <h2>Investigate The HR Schema</h2>
 
 <h3>What Tables Do We Have?</h3>
+Log into SQL Plus as the HR user. 
+> If you're still logged in as sys you can change to the HR account by typing "connect hr/hr").
+
 <pre>
-SQL> connect hr/hr
+$ sqlplus hr/hr
 SQL> set lines 180
 
 SQL> select table_name from user_tables;
@@ -165,7 +192,9 @@ JOB_HISTORY
 7 rows selected.
 </pre>
 
-<h3>Table EMPLOYEES</h3>
+There are seven tables in the HR schema. I'm going to look at five of them.
+
+<h3>1. Table EMPLOYEES</h3>
 <pre>
 SQL> desc employees
 
@@ -184,7 +213,7 @@ SQL> desc employees
  DEPARTMENT_ID                    NUMBER(4)
 </pre>
 
-<h3>Table JOBS</h3>
+<h3>2. Table JOBS</h3>
 <pre>
 SQL> desc jobs
 
@@ -196,7 +225,7 @@ SQL> desc jobs
  MAX_SALARY                       NUMBER(6)
 </pre>
 
-<h3>Table DEPARTMENTS</h3>
+<h3>3. Table DEPARTMENTS</h3>
 
 <pre>
 SQL> desc departments
@@ -209,7 +238,7 @@ SQL> desc departments
  LOCATION_ID                       NUMBER(4)
 </pre>
 
-<h3>Table LOCATIONS</h3>
+<h3>4. Table LOCATIONS</h3>
 
 <pre>
 SQL> desc locations
@@ -224,7 +253,7 @@ SQL> desc locations
  COUNTRY_ID                       CHAR(2)
 </pre>
 
-<h3>Table COUNTRIES</h3>
+<h3>5. Table COUNTRIES</h3>
 
 <pre>
 SQL> desc countries
@@ -235,7 +264,7 @@ SQL> desc countries
  COUNTRY_NAME                     VARCHAR2(40)
  REGION_ID                        NUMBER
 </pre>
-
+<br>
 <h2>Explore The HR Data</h2>
 
 In SQLPlus we can select employees from the employees table, for example:
@@ -253,8 +282,8 @@ EMPLOYEE_ID FIRST_NAME           LAST_NAME            EMAIL                PHONE
         126 Irene                Mikkilineni          IMIKKILI             650.124.1224         28-SEP-06 ST_CLERK         2700                       120            50
 </pre>
 
-
-We want to focus on employees reporting to a manager with ID=121:
+Let's walk through the schema to get familiar with the dat that we're going to migrate.
+For a moment let's just focus on employees reporting to a manager with ID=121:
 
 <pre>
 SQL> select * from employees where manager_id=121;
@@ -271,7 +300,7 @@ EMPLOYEE_ID FIRST_NAME           LAST_NAME            EMAIL                PHONE
         187 Anthony              Cabrio               ACABRIO              650.509.4876         07-FEB-07 SH_CLERK         3000                       121            50
 </pre>
 
-Who is that manager?
+A little relational reminder. Who <b>is</b> that manager with ID=121?
 
 <pre>
 SQL> select * from employees where employee_id=121;
@@ -281,7 +310,7 @@ EMPLOYEE_ID FIRST_NAME           LAST_NAME            EMAIL                PHONE
         121 Adam                 Fripp                AFRIPP               650.123.2234         10-APR-05 ST_MAN           8200                       100            50
 </pre>
 
-What is HIS job?
+...and what is <b>HIS</b> job?
 <pre>
 SQL> select * from jobs where job_id='ST_MAN';
 
@@ -290,7 +319,7 @@ JOB_ID     JOB_TITLE                           MIN_SALARY MAX_SALARY
 ST_MAN     Stock Manager                             5500       8500
 </pre>
 
-Who is <b>HIS</b> boss?
+...and who is <b>HIS</b> boss?
 
 <pre>
 EMPLOYEE_ID FIRST_NAME           LAST_NAME            EMAIL                PHONE_NUMBER         HIRE_DATE JOB_ID         SALARY COMMISSION_PCT MANAGER_ID DEPARTMENT_ID
@@ -305,7 +334,7 @@ DEPARTMENT_ID DEPARTMENT_NAME                MANAGER_ID LOCATION_ID
 ------------- ------------------------------ ---------- -----------
            50 Shipping                              121        1500
 </pre>
-Where is location=1500?
+It's in Location 1500. Where is location=1500?
 <pre>
 SQL> select * from locations where location_id=1500;
 
@@ -313,7 +342,7 @@ LOCATION_ID STREET_ADDRESS                           POSTAL_CODE  CITY          
 ----------- ---------------------------------------- ------------ ------------------------------ ------------------------- --
        1500 2011 Interiors Blvd                      99236        South San Francisco            California                US
 </pre>
-What country is that in?
+And column CO value is "US" - I wonder what country that is in?
 <pre>
 SQL> select * from countries where country_id='US';
 
@@ -322,7 +351,9 @@ CO COUNTRY_NAME                              REGION_ID
 US United States of America                          2
 
 1 row selected.
-
+</pre>
+And the US is in the Americas:
+<pre>
 SQL> select * from regions where region_id=2;
 
  REGION_ID REGION_NAME
@@ -333,25 +364,11 @@ SQL> select * from regions where region_id=2;
 
 <br>
 <h1>Using Spark To Read Oracle Data</h1>
-The objective of this exercise is to use the DatFrame capability introduced in Apache Spark 1.3 to load data from tables in an Oracle database (12c) via Oracle's JDBC thin driver, 
- and generate a result set, joining tables where necessary.
- 
-At this point ensure that you have an Oracle database tns listener running. This usually runs on port 1521.
-
-In my example the database name is orcl.
-We will connect from Spark, using the Oracle jdbc driver, to the orcl database on TNS port 1521.
-<br>
-
+So all is looking good on the Oracle side. Now time to turn to Cassandra and Spark.
 
 <h2>Download Oracle ojdbc7.jar</h2>
 We have to add the Oracle JDBC jar file to our Spark classpath so that Spark knows how to talk to the Oracle database.
 
-You can download the ojdbc JAR file from:
-
-http://www.oracle.com/technetwork/database/features/jdbc/jdbc-drivers-12c-download-1958347.html
-
-I've used ojdbc7.jar which is certified for use with both JDK7 and JDK8
-In my Oracle SampleAppv607 VM Firefox downloaded this to /app/oracle/downloads/
 
 <br>
 <h2>Using The Oracle JDBC Driver</h2>
@@ -395,7 +412,8 @@ Spark context available as sc.
 Hive context available as sqlContext. Will be initialized on first use.
 </pre>
 <br>
-We import those classes again:
+<h2>Import Some Classes</h2>
+We import some classes:
 <pre lang="scala">
 import com.datastax.spark.connector._
 import com.datastax.spark.connector.cql.CassandraConnector
@@ -404,19 +422,22 @@ import org.apache.spark.{SparkConf, SparkContext}
 import java.io._
 </pre>
 <br>
+<h2>Read Oracle Data Into A Spark DataFrame</h2>
+
 And try the data load from Oracle again - all good and no errors:
 <pre lang="scala">
 scala> val employees = sqlContext.load("jdbc", Map("url" -> "jdbc:oracle:thin:hr/hr@localhost:1521/orcl", "dbtable" -> "employees"))
 <console>:67: warning: method load in class SQLContext is deprecated: Use read.format(source).options(options).load(). This will be removed in Spark 2.0.
          val employees = sqlContext.load("jdbc", Map("url" -> "jdbc:oracle:thin:hr/hr@localhost:1521/orcl", "dbtable" -> "employees"))
-
-
+</pre>
+The Spark REPL responds with:
+<pre>
 employees: org.apache.spark.sql.DataFrame = [EMPLOYEE_ID: decimal(6,0), FIRST_NAME: string, LAST_NAME: string, EMAIL: string, PHONE_NUMBER: string, HIRE_DATE: timestamp, JOB_ID: string, SALARY: decimal(8,2), COMMISSION_PCT: decimal(2,2), MANAGER_ID: decimal(6,0), DEPARTMENT_ID: decimal(4,0)]
 </pre>
 
 
 <h2>Examining The DatFrame</h2>
-
+We can use the nifty printSchema DataFrame method to show us the schema in the DataFrame that we created.
 <pre lang="scala">
 scala> employees.printSchema()
 root
@@ -432,7 +453,7 @@ root
  |-- MANAGER_ID: decimal(6,0) (nullable = true)
  |-- DEPARTMENT_ID: decimal(4,0) (nullable = true)
 </pre>
-
+We can read the data from the DataFrame using the show() method:
 <pre lang="scala">
 scala> employees.show()
 +-----------+-----------+----------+--------+------------+--------------------+----------+--------+--------------+----------+-------------+
@@ -462,10 +483,108 @@ scala> employees.show()
 only showing top 20 rows
 </pre>
 
+Again, this time with Departments:
+<pre lang="scala">
+scala> val departments = sqlContext.load("jdbc", Map("url" -> "jdbc:oracle:thin:hr/hr@localhost:1521/orcl", "dbtable" -> "departments"))
+<console>:67: warning: method load in class SQLContext is deprecated: Use read.format(source).options(options).load(). This will be removed in Spark 2.0.
+         val departments = sqlContext.load("jdbc", Map("url" -> "jdbc:oracle:thin:hr/hr@localhost:1521/orcl", "dbtable" -> "departments"))                                      ^
+</pre>
+REPL responds:
+<pre lang="scala">
+departments: org.apache.spark.sql.DataFrame = [DEPARTMENT_ID: decimal(4,0), DEPARTMENT_NAME: string, MANAGER_ID: decimal(6,0), LOCATION_ID: decimal(4,0)]
+</pre>
+View Departments schema:
+<pre lang="scala">
+scala> departments.printSchema()
+root
+ |-- DEPARTMENT_ID: decimal(4,0) (nullable = false)
+ |-- DEPARTMENT_NAME: string (nullable = false)
+ |-- MANAGER_ID: decimal(6,0) (nullable = true)
+ |-- LOCATION_ID: decimal(4,0) (nullable = true)
+</pre>
+Read records from teh Departments DataFrame:
+
+<pre lang="scala">
+scala> departments.show()
++-------------+--------------------+----------+-----------+
+|DEPARTMENT_ID|     DEPARTMENT_NAME|MANAGER_ID|LOCATION_ID|
++-------------+--------------------+----------+-----------+
+|           10|      Administration|       200|       1700|
+|           20|           Marketing|       201|       1800|
+|           30|          Purchasing|       114|       1700|
+|           40|     Human Resources|       203|       2400|
+|           50|            Shipping|       121|       1500|
+|           60|                  IT|       103|       1400|
+|           70|    Public Relations|       204|       2700|
+|           80|               Sales|       145|       2500|
+|           90|           Executive|       100|       1700|
+|          100|             Finance|       108|       1700|
+|          110|          Accounting|       205|       1700|
+|          120|            Treasury|      null|       1700|
+|          130|       Corporate Tax|      null|       1700|
+|          140|  Control And Credit|      null|       1700|
+|          150|Shareholder Services|      null|       1700|
+|          160|            Benefits|      null|       1700|
+|          170|       Manufacturing|      null|       1700|
+|          180|        Construction|      null|       1700|
+|          190|         Contracting|      null|       1700|
+|          200|          Operations|      null|       1700|
++-------------+--------------------+----------+-----------+
+only showing top 20 rows
+</pre>
+
+
+<H2>Multi-Table Joins In SparkSQL</h2>
+We may well need to perform some element of data transformation when we migrate data from a relational database to a NoSQL database like Apache Cassandra. Transformation typically involves deduplication of data and to do this we frequently want to join data between tables. Let's see how we do that in Spark.
+
+<h3>Create SparkSQL Tables From The DataFrames</h3>
+<pre lang="scala">
+scala> employees.registerTempTable("empTable")
+
+scala> departments.registerTempTable("deptTable")
+</pre>
+Now query empTable and deptTable joining on DEPARTMENT_ID:
+<pre lang="scla">
+scala> val depts_by_emp = sqlContext.sql("SELECT employee_id, department_name FROM empTable e, deptTable d where e.department_id=d.department_id")
+depts_by_emp: org.apache.spark.sql.DataFrame = [employee_id: decimal(6,0), department_name: string]
+</pre>
+We can look at the results of the query:
+<pre>
+scala> depts_by_emp.show()
++-----------+---------------+                                                   
+|employee_id|department_name|
++-----------+---------------+
+|        203|Human Resources|
+|        120|       Shipping|
+|        121|       Shipping|
+|        122|       Shipping|
+|        123|       Shipping|
+|        124|       Shipping|
+|        125|       Shipping|
+|        126|       Shipping|
+|        127|       Shipping|
+|        128|       Shipping|
+|        129|       Shipping|
+|        130|       Shipping|
+|        131|       Shipping|
+|        132|       Shipping|
+|        133|       Shipping|
+|        134|       Shipping|
+|        135|       Shipping|
+|        136|       Shipping|
+|        137|       Shipping|
+|        138|       Shipping|
++-----------+---------------+
+only showing top 20 rows
+</pre>
+<br>
+
+
+
 Cassandra Data Model
 --------------------
 Cassandra is a NoSQL distributed database so we cannot use the table joins that are in the relational Oracle HR database schema. 
-We need to de-normalise the HR schema, removing foreign keys and look up tables - these are relational concepts.
+We need to de-normalise the HR schema, removing foreign keys and look-up tables - these are relational concepts that don't .
 
 For this exercise I will focus on the EMPLOYEES, JOBS and DEPARTMENTS tables.
 
@@ -486,7 +605,7 @@ Our queries are:
 - Query all managers, optionally returning  employees by manager
 
 In Cassandra we will create the following tables:
-- 1 table for employees, similar to HR.EMPLOYEES but without the foreign keys to JOB_ID, MANAGER_ID and DEPARTMENT_ID. 
+- A table for employees, similar to HR.EMPLOYEES but without the foreign keys to JOB_ID, MANAGER_ID and DEPARTMENT_ID. 
    The original DEPARTMENTS table has a FK MANAGER_ID to the EMPLOYEES table, so we will also add a clustering column MANAGES_DEPT_ID so that we can identify all departments for which an employee is a manager
    We will not make this clustering column part of the partitioning primary key because we may want to search on 
 - We will replace the HR.DEPARTMENTS lookup table - we will use EMPLOYEES_BY_DEPARTMENT with a PK on DEPARTMENT_ID, clustered on EMPLOYEE_ID
@@ -502,7 +621,6 @@ This table will store information on employees, and for each employee there is a
 For each employee their first name, last name, email address etc is static data - so we can define them as static columns that belong to the partition key, not the clustering columns.
 
 <pre>
-DROP TABLE IF EXISTS EMPLOYEES;
 CREATE TABLE employees (
  EMPLOYEE_ID            	bigint,
  FIRST_NAME             	text  static,
@@ -524,7 +642,7 @@ So we could move the manager data out of the EMPLOYEES table and use the EMPLOYE
 
 <h3>Query all employees on EMPLOYEE_ID</h3>
 This table satisfies query 1:
-<pre>
+<pre lang="sql">
 DROP TABLE IF EXISTS EMPLOYEES;
 CREATE TABLE employees (
  EMPLOYEE_ID            	bigint,
@@ -535,8 +653,85 @@ CREATE TABLE employees (
  HIRE_DATE              	text,
  SALARY                 	decimal,
  COMMISSION_PCT         	decimal,
- PRIMARY KEY (EMPLOYEE_ID);
+ PRIMARY KEY (EMPLOYEE_ID));
 </pre>
+
+
+If you try to save to Cassandra now using the Spark-Cassandra connector it will fail with an error message saying that columns don't exist e.g. "EMPLOYEE_ID", "FIRST_NAME". This is because the connector expects the column case to match in the dataframe and in the Cassandra table. In cassandra theyre in lower case so the dataframe must match.
+Here's our schema again:
+
+<pre lang="scala">
+scala> employees.printSchema()
+root
+ |-- EMPLOYEE_ID: decimal(6,0) (nullable = false)
+ |-- FIRST_NAME: string (nullable = true)
+ |-- LAST_NAME: string (nullable = false)
+ |-- EMAIL: string (nullable = false)
+ |-- PHONE_NUMBER: string (nullable = true)
+ |-- HIRE_DATE: timestamp (nullable = false)
+ |-- JOB_ID: string (nullable = false)
+ |-- SALARY: decimal(8,2) (nullable = true)
+ |-- COMMISSION_PCT: decimal(2,2) (nullable = true)
+ |-- MANAGER_ID: decimal(6,0) (nullable = true)
+ |-- DEPARTMENT_ID: decimal(4,0) (nullable = true)
+</pre>
+We can create a list of column names in lower case matching the dataframe order, creating a new dataframe "emps_lc" in the process.
+We rename the columns in the dataframe like this:
+<pre lang="scala">
+scala> val newNames = Seq("employee_id", "first_name", "last_name", "email","phone_number","hire_date","job_Id","salary","commission_pct","manager_id","department_id")
+newNames: Seq[String] = List(employee_id, first_name, last_name, email, phone_number, hire_date, job_Id, salary, commission_pct, manager_id, department_id)
+
+scala> val emps_lc = employees.toDF(newNames: _*)
+emps_lc: org.apache.spark.sql.DataFrame = [employee_id: decimal(6,0), first_name: string, last_name: string, email: string, phone_number: string, hire_date: timestamp, job_Id: string, salary: decimal(8,2), commission_pct: decimal(2,2), manager_id: decimal(6,0), department_id: decimal(4,0)]
+</pre>
+
+The schema in our new dataframe is in lower case:
+<pre lang="scala">
+scala> emps_lc.printSchema()
+root
+ |-- employee_id: decimal(6,0) (nullable = false)
+ |-- first_name: string (nullable = true)
+ |-- last_name: string (nullable = false)
+ |-- email: string (nullable = false)
+ |-- phone_number: string (nullable = true)
+ |-- hire_date: timestamp (nullable = false)
+ |-- job_Id: string (nullable = false)
+ |-- salary: decimal(8,2) (nullable = true)
+ |-- commission_pct: decimal(2,2) (nullable = true)
+ |-- manager_id: decimal(6,0) (nullable = true)
+ |-- department_id: decimal(4,0) (nullable = true)
+</pre>
+
+
+There are some columns in the dataframe that we don't need for this step. We simply create a new dataframe containing the columns that we do want to use.
+
+We should still have the SparkSQL table empTable that we defined earlier based on the employees dataframe. We'll select the columns that we want for the Cassandra table into a new dataframe - you can call dataframes what you want:
+<pre lang="scala">
+scala> val emps_lc_subset = sqlContext.sql("SELECT employee_id, first_name, last_name, email, phone_number, hire_date, job_id, salary, commission_pct FROM empTable")
+emps_lc_subset: org.apache.spark.sql.DataFrame = [employee_id: decimal(6,0), first_name: string, last_name: string, email: string, phone_number: string, hire_date: timestamp, job_id: string, salary: decimal(8,2), commission_pct: decimal(2,2)]
+</pre>
+And we have the schema we're looking for to match the Cassandra target table.
+<pre lang="scala">
+scala> emps_lc_subset.printSchema()
+root
+ |-- employee_id: decimal(6,0) (nullable = false)
+ |-- first_name: string (nullable = true)
+ |-- last_name: string (nullable = false)
+ |-- email: string (nullable = false)
+ |-- phone_number: string (nullable = true)
+ |-- hire_date: timestamp (nullable = false)
+ |-- job_id: string (nullable = false)
+ |-- salary: decimal(8,2) (nullable = true)
+ |-- commission_pct: decimal(2,2) (nullable = true)
+</pre>
+
+
+
+employees.write.format("org.apache.spark.sql.cassandra").options(Map( "table" -> "employees", "keyspace" -> "hr")).save()
+
+
+
+
 
 <h3>Query all departments, optionally returning employees by department</h3>
 
