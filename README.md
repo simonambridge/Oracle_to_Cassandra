@@ -1,5 +1,6 @@
 # Migrating Relational Data From Oracle To Cassandra
 
+<H1>WORK IN PROGRESS - come back later</H1>  
 The objective of this exercise is to demonstrate how to migrate data from Oracle to Cassandra. I'll be using the DatFrame capability introduced in Apache Spark 1.3 to load data from tables in an Oracle database (12c) via Oracle's JDBC thin driver, to generate a result set, joining tables where necessary.
 The data will then be saved to Cassandra.
  
@@ -576,22 +577,22 @@ only showing top 20 rows
 
 
 
-Cassandra Data Model
---------------------
-Cassandra is a NoSQL distributed database so we cannot use the table joins that are in the relational Oracle HR database schema. 
-We need to de-normalise the HR schema, removing foreign keys and look-up tables - these are relational concepts that don't .
+<h2>Cassandra Data Modelling</h2>
+Some basics:
+- Cassandra is a NoSQL distributed database so we cannot use the table joins that are in the relational Oracle HR database schema. 
+- We need to de-normalise the HR schema, removing foreign keys and look-up tables - these are relational concepts that don't exist in the distributed world.
 
 For this exercise I will focus on the EMPLOYEES, JOBS and DEPARTMENTS tables.
 
-Cassandra data modeling is a query-driven process - you first decide the queries that you wish to run, then build your data model around those queries. 
-This is how Cassandra can ensure that your queries with scale with the cluster (this is usually the opposite of the relational world where you start with 
-your data, decide what queries you want to run against it, then index it to the eyeballs to support those queries).
+- Cassandra data modelling is a query-driven process - you first decide the queries that you wish to run, then build your data model around those queries. 
+- This is how Cassandra can ensure that your queries with scale with the cluster (this is usually the opposite of the relational world where you start with your data, decide what queries you want to run against it, then index it to the eyeballs to support those queries).
 
 Remember that in a relational database maintaining those indexes is very expensive operation that becomes more expensive as the volume of data grows.
 In contrast...<<<
 
-In the Cassandra world we start with the queries and then design the data model to support those queries. 
-We want to pull the source data from Oracle and move it to the tables in Cassandra. We will perform data transformations in Spark and SparkSQL to achieve this.
+- In the Cassandra world we start with the queries and then design the data model to support those queries. 
+- We want to pull the source data from Oracle and move it to the tables in Cassandra. 
+- We will perform data transformations on the in-flight data in Spark and SparkSQL to achieve this.
 
 Our queries are:
 - Query all employees on EMPLOYEE_ID
@@ -601,18 +602,19 @@ Our queries are:
 
 In Cassandra we will create the following tables:
 - A table for employees, similar to HR.EMPLOYEES but without the foreign keys to JOB_ID, MANAGER_ID and DEPARTMENT_ID. 
-   The original DEPARTMENTS table has a FK MANAGER_ID to the EMPLOYEES table, so we will also add a clustering column MANAGES_DEPT_ID so that we can identify all departments for which an employee is a manager
-   We will not make this clustering column part of the partitioning primary key because we may want to search on 
 - We will replace the HR.DEPARTMENTS lookup table - we will use EMPLOYEES_BY_DEPARTMENT with a PK on DEPARTMENT_ID, clustered on EMPLOYEE_ID
 - We will replace the HR.JOBS lookup table - we will use EMPLOYEES_BY_JOB with a PK on JOB_ID, clustered on EMPLOYEE_ID
 - We will replace the FK on MANAGER_ID in the EMPLOYEES table - instead we will use an EMPLOYEES_BY_MANAGER table with a PK on MANAGER, clustered on EMPLOYEE_ID
 
+<h3>Create HR KeySpace In Cassandra</h3>
+First thing we need to do in Cassandra is create a keyspace to contain the tables that we will create:
 <pre>
 CREATE KEYSPACE IF NOT EXISTS HR WITH REPLICATION = {'class': 'SimpleStrategy', 'replication_factor': 1 };
 USE HR;
 </pre>
 This table will store information on employees, and for each employee there is a one to many relationship for the departments that employee manages. We could use a clustering column for the department(s) managed by that employee.
 
+<h3>Create Employees Table</h3>
 For each employee their first name, last name, email address etc is static data - so we can define them as static columns that belong to the partition key, not the clustering columns.
 
 <pre>
@@ -632,10 +634,10 @@ CREATE TABLE employees (
 
 Alternatively we can completely denormalise and move the department data to a separate table. Data duplication in Cassandra is not a bad thing. It's quicker than updating indexes and disk is cheap, and Cassandra writes are fast!
 
-So we could move the manager data out of the EMPLOYEES table and use the EMPLOYEES table purely for employee personal data - and put the department manager details in another table altogether.
+So we'll move the manager data out of the EMPLOYEES table and use the EMPLOYEES table purely for employee personal data - and put the department manager details in another table altogether.
 
 
-<h3>Query 1: Query all employees on EMPLOYEE_ID</h3>
+<h3>Query 1: Query All Employees on EMPLOYEE_ID</h3>
 This table satisfies query 1:
 <pre lang="sql">
 DROP TABLE IF EXISTS EMPLOYEES;
@@ -726,7 +728,7 @@ root
  |-- salary: decimal(8,2) (nullable = true)
  |-- commission_pct: decimal(2,2) (nullable = true)
 </pre>
-Write the dataframe to Cassandra
+<h3>Write the dataframe to Cassandra</h3>
 <pre lang="scala">
 scala> emps_lc_subset.write.format("org.apache.spark.sql.cassandra").options(Map( "table" -> "employees", "keyspace" -> "hr")).save()
 </pre>
@@ -753,7 +755,7 @@ cqlsh:hr> select * from employees;
 </pre>
 
 
-<h3>Query 2: Query all departments, optionally returning employees by department</h3>
+<h3>Query 2: Query All Departments And Employees by Department</h3>
 
 We have a table for employees stored by department - EMPLOYEE_ID is the clustering column.
 
@@ -821,7 +823,8 @@ scala> emp_by_dept.show()
 +-------------+---------------+-----------+----------+-----------+
 only showing top 20 rows
 </pre>
-Write the dataframe to Cassandra
+
+<h3>Write the dataframe to Cassandra</h3>
 <pre lang="scala">
 scala> emp_by_dept.write.format("org.apache.spark.sql.cassandra").options(Map( "table" -> "employees_by_dept", "keyspace" -> "hr")).save()
 </pre>
@@ -884,11 +887,11 @@ cqlsh:hr> select department_name, first_name, last_name from employees_by_dept w
 
 
 <h3>Query 3: Query All Jobs, And Employees By Job</h3>
-The second part of the requirement was to be able to optionally return Employees by Job</h3>
+The second part of this requirement was to be able to optionally return Employees by Job</h3>
 With the techniques described above you should now be able to have a go at doing the same thing yourself with the Jobs and Employees tables.
 
 <h3>Query 4: Query All Managers, And Employees By Manager</h3>
-The second part of the requirement was to be able to optionally return employees by manager.
 If you're a real over-achiever why not have a go at using the Manager column in the Employees table :)
+The second part of this requirement was to be able to optionally return employees by manager.
 
 
