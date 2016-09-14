@@ -166,6 +166,7 @@ PL/SQL procedure successfully completed.
 <h3>What Tables Do We Have?</h3>
 Log into SQL Plus as the HR user. 
 > If you're still logged in as sys you can change to the HR account by typing "connect hr/hr").
+![alt text] (https://raw.githubusercontent.com/simonambridge/Oracle_to_Cassandra/master/Oracle_to_Cassandra_OSchema.png)
 
 <pre>
 $ sqlplus hr/hr
