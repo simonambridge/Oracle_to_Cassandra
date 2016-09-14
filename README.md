@@ -705,6 +705,7 @@ root
 There are some columns in the dataframe that we don't need for this step. We simply create a new dataframe containing the columns that we do want to use.
 
 We should still have the SparkSQL table empTable that we defined earlier based on the employees dataframe. We'll select the columns that we want for the Cassandra table into a new dataframe - you can call dataframes what you want:
+
 <pre lang="scala">
 scala> val emps_lc_subset = sqlContext.sql("SELECT employee_id, first_name, last_name, email, phone_number, hire_date, salary, commission_pct FROM empTable")
 
@@ -774,108 +775,121 @@ For each department we store the department id, the name of the department, and 
 Similar to the example previously, we select employees by department from our SparkSQL tables:
 
 <pre lang="scala">
-scala> val depts_by_emp = sqlContext.sql("SELECT d.department_id, d.department_name, e.employee_id, e.first_name, e.last_name, e.email FROM empTable e, deptTable d where e.department_id=d.department_id")
+scala> val emp_by_dept = sqlContext.sql("SELECT d.department_id, d.department_name, e.employee_id, e.first_name, e.last_name FROM empTable e, deptTable d where e.department_id=d.department_id")
 </pre>
-Confirmation output:
+Response:
 <pre>
-depts_by_emp: org.apache.spark.sql.DataFrame = [department_id: decimal(4,0), department_name: string, employee_id: decimal(6,0), first_name: string, last_name: string, email: string]
+emp_by_dept: org.apache.spark.sql.DataFrame = [department_id: decimal(4,0), department_name: string, employee_id: decimal(6,0), first_name: string, last_name: string]
 </pre>
 
-<pre>
-scala> depts_by_emp.printSchema()
+Here's the schema for the resulting dataframe:
+<pre lang="scala">
+scala> emp_by_dept.printSchema()
 root
  |-- department_id: decimal(4,0) (nullable = false)
  |-- department_name: string (nullable = false)
  |-- employee_id: decimal(6,0) (nullable = false)
  |-- first_name: string (nullable = true)
  |-- last_name: string (nullable = false)
- |-- email: string (nullable = false)
 </pre>
 
+The data is in the format that we want it for Cassandra:
 <pre lang="scala">
-scala> depts_by_emp.show()
-+-------------+---------------+-----------+----------+-----------+--------+     
-|department_id|department_name|employee_id|first_name|  last_name|   email|
-+-------------+---------------+-----------+----------+-----------+--------+
-|           40|Human Resources|        203|     Susan|     Mavris| SMAVRIS|
-|           50|       Shipping|        120|   Matthew|      Weiss|  MWEISS|
-|           50|       Shipping|        121|      Adam|      Fripp|  AFRIPP|
-|           50|       Shipping|        122|     Payam|   Kaufling|PKAUFLIN|
-|           50|       Shipping|        123|    Shanta|    Vollman|SVOLLMAN|
-|           50|       Shipping|        124|     Kevin|    Mourgos|KMOURGOS|
-|           50|       Shipping|        125|     Julia|      Nayer|  JNAYER|
-|           50|       Shipping|        126|     Irene|Mikkilineni|IMIKKILI|
-|           50|       Shipping|        127|     James|     Landry| JLANDRY|
-|           50|       Shipping|        128|    Steven|     Markle| SMARKLE|
-|           50|       Shipping|        129|     Laura|     Bissot| LBISSOT|
-|           50|       Shipping|        130|     Mozhe|   Atkinson|MATKINSO|
-|           50|       Shipping|        131|     James|     Marlow| JAMRLOW|
-|           50|       Shipping|        132|        TJ|      Olson| TJOLSON|
-|           50|       Shipping|        133|     Jason|     Mallin| JMALLIN|
-|           50|       Shipping|        134|   Michael|     Rogers| MROGERS|
-|           50|       Shipping|        135|        Ki|        Gee|    KGEE|
-|           50|       Shipping|        136|     Hazel| Philtanker|HPHILTAN|
-|           50|       Shipping|        137|    Renske|     Ladwig| RLADWIG|
-|           50|       Shipping|        138|   Stephen|     Stiles| SSTILES|
-+-------------+---------------+-----------+----------+-----------+--------+
+scala> emp_by_dept.show()
++-------------+---------------+-----------+----------+-----------+              
+|department_id|department_name|employee_id|first_name|  last_name|
++-------------+---------------+-----------+----------+-----------+
+|           40|Human Resources|        203|     Susan|     Mavris|
+|           50|       Shipping|        120|   Matthew|      Weiss|
+|           50|       Shipping|        121|      Adam|      Fripp|
+|           50|       Shipping|        122|     Payam|   Kaufling|
+|           50|       Shipping|        123|    Shanta|    Vollman|
+|           50|       Shipping|        124|     Kevin|    Mourgos|
+|           50|       Shipping|        125|     Julia|      Nayer|
+|           50|       Shipping|        126|     Irene|Mikkilineni|
+|           50|       Shipping|        127|     James|     Landry|
+|           50|       Shipping|        128|    Steven|     Markle|
+|           50|       Shipping|        129|     Laura|     Bissot|
+|           50|       Shipping|        130|     Mozhe|   Atkinson|
+|           50|       Shipping|        131|     James|     Marlow|
+|           50|       Shipping|        132|        TJ|      Olson|
+|           50|       Shipping|        133|     Jason|     Mallin|
+|           50|       Shipping|        134|   Michael|     Rogers|
+|           50|       Shipping|        135|        Ki|        Gee|
+|           50|       Shipping|        136|     Hazel| Philtanker|
+|           50|       Shipping|        137|    Renske|     Ladwig|
+|           50|       Shipping|        138|   Stephen|     Stiles|
++-------------+---------------+-----------+----------+-----------+
 only showing top 20 rows
 </pre>
-
-
-
-
-
-
-
-<h3>Query 3: Query all jobs, optionally returning  employees by job</h3>
-
-
-<h3>Query 4: Query all managers, optionally returning  employees by manager</h3>
-
-
-
-
-
-
-
-
-
-
-
-
-<H1>test data</H1>
+Write the dataframe to Cassandra
+<pre lang="scala">
+scala> emp_by_dept.write.format("org.apache.spark.sql.cassandra").options(Map( "table" -> "employees_by_dept", "keyspace" -> "hr")).save()
+</pre>
+And the records are there in Cassandra:
 <pre>
-truncate table employees;
-insert into employees (employee_id, first_name, manages_dept_id, manages_dept_name) values (1,'simon',101,'sales');
-insert into employees (employee_id, first_name, manages_dept_id, manages_dept_name) values (2,'bill',102,'sales');
-insert into employees (employee_id, first_name, manages_dept_id, manages_dept_name) values (3,'jon',103,'sales');
-insert into employees (employee_id, first_name, manages_dept_id, manages_dept_name) values (4,'mary',104,'sales');
-insert into employees (employee_id, first_name, manages_dept_id, manages_dept_name) values (5,'jane',105,'sales');
-insert into employees (employee_id, first_name, manages_dept_id, manages_dept_name) values (6,'mike',106,'sales');
-insert into employees (employee_id, first_name, manages_dept_id, manages_dept_name) values (7,'ian',107,'sales');
-insert into employees (employee_id, first_name, manages_dept_id, manages_dept_name) values (8,'nige',108,'sales');
-insert into employees (employee_id, first_name, manages_dept_id, manages_dept_name) values (9,'steve',109,'sales');
-insert into employees (employee_id, first_name, manages_dept_id, manages_dept_name) values (10,'julia',110,'sales');
+cqlsh:hr> select * from employees_by_dept;           
 
-insert into employees (employee_id, first_name, manages_dept_id, manages_dept_name) values (1,'simon',111,'pre-sales');
+ department_id | employee_id | department_name | first_name  | last_name
+---------------+-------------+-----------------+-------------+-------------
+            30 |         114 |      Purchasing |         Den |    Raphaely
+            30 |         115 |      Purchasing |   Alexander |        Khoo
+            30 |         116 |      Purchasing |      Shelli |       Baida
+            30 |         117 |      Purchasing |       Sigal |      Tobias
+            30 |         118 |      Purchasing |         Guy |      Himuro
+            30 |         119 |      Purchasing |       Karen |  Colmenares
+            20 |         201 |       Marketing |     Michael |   Hartstein
+            20 |         202 |       Marketing |         Pat |         Fay
+            80 |         145 |           Sales |        John |     Russell
+            80 |         146 |           Sales |       Karen |    Partners
+</pre>
+Now we're able to retrieve data about departments:
+<pre>
+cqlsh:hr> select distinct department_id, department_name from employees_by_dept;
+ department_id | department_name
+---------------+------------------
+            30 |       Purchasing
+            20 |        Marketing
+            80 |            Sales
+            60 |               IT
+           110 |       Accounting
+            50 |         Shipping
+            10 |   Administration
+           100 |          Finance
+            40 |  Human Resources
+            70 | Public Relations
+            90 |        Executive
+</pre>
+And the second part of the query requirement was to be able to return employees by department:
+<pre>
+cqlsh:hr> select department_name, first_name, last_name from employees_by_dept where department_id=50;
+
+ department_name | first_name | last_name
+-----------------+------------+-------------
+        Shipping |    Matthew |       Weiss
+        Shipping |       Adam |       Fripp
+        Shipping |      Payam |    Kaufling
+        Shipping |     Shanta |     Vollman
+        Shipping |      Kevin |     Mourgos
+        Shipping |      Julia |       Nayer
+        Shipping |      Irene | Mikkilineni
+        Shipping |      James |      Landry
+        Shipping |     Steven |      Markle
+        Shipping |      Laura |      Bissot
+        Shipping |      Mozhe |    Atkinson
+        Shipping |      James |      Marlow
+
 </pre>
 
 
 
 
+<h3>Query 3: Query All Jobs, And Employees By Job</h3>
+The second part of the requirement was to be able to optionally return Employees by Job</h3>
+With the techniques described above you should now be able to have a go at doing the same thing yourself with the Jobs and Employees tables.
 
-
-
-
-
-
-
-
-
-
-??pip install cassandra-driver??
-
-
-
+<h3>Query 4: Query All Managers, And Employees By Manager</h3>
+The second part of the requirement was to be able to optionally return employees by manager.
+If you're a real over-achiever why not have a go at using the Manager column in the Employees table :)
 
 
