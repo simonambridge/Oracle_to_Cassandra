@@ -29,7 +29,6 @@ As we will connect from Spark, using the Oracle jdbc driver, to the "orcl" datab
 <br>
 
 Now on to installing DataStax Enterprise and playing with some data!
-<br>
 --
 <H1>Set Up DataStax Components</H1>
 <br>
@@ -48,13 +47,11 @@ baseurl=https://datastaxrepo_gmail.com:utJVKEg4lKeaWTX@rpm.datastax.com/enterpri
 enabled=1
 gpgcheck=0
 </pre>
-<br>
 
 <h2>Import The DataStax Repo Key</H2>
 <pre>
 rpm --import http://rpm.datastax.com/rpm/repo_key 
 </pre>
-<br>
 
 
 <h2>Install DSE Components</H2>
@@ -115,7 +112,6 @@ Remove the old system.log if it exists:
 </pre>
 <br>
 
-<br>
 <H2>Identify Spark Master</h2>
 We use the new DSE 5.0 format for the dse tool to get the address of the Spark Master in our cluster. 
 As we are using a single node for our cluster it will be no surprise that the Spark Master is also on our single node!
@@ -544,7 +540,7 @@ scala> employees.registerTempTable("empTable")
 scala> departments.registerTempTable("deptTable")
 </pre>
 Now query empTable and deptTable joining on DEPARTMENT_ID:
-<pre lang="scla">
+<pre lang="scala">
 scala> val depts_by_emp = sqlContext.sql("SELECT employee_id, department_name FROM empTable e, deptTable d where e.department_id=d.department_id")
 depts_by_emp: org.apache.spark.sql.DataFrame = [employee_id: decimal(6,0), department_name: string]
 </pre>
@@ -640,7 +636,7 @@ Alternatively we can completely denormalise and move the department data to a se
 So we could move the manager data out of the EMPLOYEES table and use the EMPLOYEES table purely for employee personal data - and put the department manager details in another table altogether.
 
 
-<h3>Query all employees on EMPLOYEE_ID</h3>
+<h3>Query 1: Query all employees on EMPLOYEE_ID</h3>
 This table satisfies query 1:
 <pre lang="sql">
 DROP TABLE IF EXISTS EMPLOYEES;
@@ -677,11 +673,14 @@ root
 </pre>
 We can create a list of column names in lower case matching the dataframe order, creating a new dataframe "emps_lc" in the process.
 We rename the columns in the dataframe like this:
+
 <pre lang="scala">
 scala> val newNames = Seq("employee_id", "first_name", "last_name", "email","phone_number","hire_date","job_Id","salary","commission_pct","manager_id","department_id")
+
 newNames: Seq[String] = List(employee_id, first_name, last_name, email, phone_number, hire_date, job_Id, salary, commission_pct, manager_id, department_id)
 
 scala> val emps_lc = employees.toDF(newNames: _*)
+
 emps_lc: org.apache.spark.sql.DataFrame = [employee_id: decimal(6,0), first_name: string, last_name: string, email: string, phone_number: string, hire_date: timestamp, job_Id: string, salary: decimal(8,2), commission_pct: decimal(2,2), manager_id: decimal(6,0), department_id: decimal(4,0)]
 </pre>
 
@@ -707,9 +706,12 @@ There are some columns in the dataframe that we don't need for this step. We sim
 
 We should still have the SparkSQL table empTable that we defined earlier based on the employees dataframe. We'll select the columns that we want for the Cassandra table into a new dataframe - you can call dataframes what you want:
 <pre lang="scala">
-scala> val emps_lc_subset = sqlContext.sql("SELECT employee_id, first_name, last_name, email, phone_number, hire_date, job_id, salary, commission_pct FROM empTable")
-emps_lc_subset: org.apache.spark.sql.DataFrame = [employee_id: decimal(6,0), first_name: string, last_name: string, email: string, phone_number: string, hire_date: timestamp, job_id: string, salary: decimal(8,2), commission_pct: decimal(2,2)]
+scala> val emps_lc_subset = sqlContext.sql("SELECT employee_id, first_name, last_name, email, phone_number, hire_date, salary, commission_pct FROM empTable")
+
+emps_lc_subset: org.apache.spark.sql.DataFrame = [employee_id: decimal(6,0), first_name: string, last_name: string, email: string, phone_number: string, hire_date: timestamp, salary: decimal(8,2), commission_pct: decimal(2,2)]
+
 </pre>
+
 And we have the schema we're looking for to match the Cassandra target table.
 <pre lang="scala">
 scala> emps_lc_subset.printSchema()
@@ -724,35 +726,111 @@ root
  |-- salary: decimal(8,2) (nullable = true)
  |-- commission_pct: decimal(2,2) (nullable = true)
 </pre>
+Write the dataframe to Cassandra
+<pre lang="scala">
+scala> emps_lc_subset.write.format("org.apache.spark.sql.cassandra").options(Map( "table" -> "employees", "keyspace" -> "hr")).save()
+</pre>
+
+And in cqlsh the records are there:
+<pre>
+cqlsh:hr> select * from employees;
+
+ employee_id | commission_pct | email    | first_name  | hire_date                | last_name   | phone_number       | salary
+-------------+----------------+----------+-------------+--------------------------+-------------+--------------------+----------
+         111 |           null | ISCIARRA |      Ismael | 2005-09-30 00:00:00-0400 |     Sciarra |       515.124.4369 |  7700.00
+         163 |           0.15 |  DGREENE |    Danielle | 2007-03-19 00:00:00-0400 |      Greene | 011.44.1346.229268 |  9500.00
+         148 |           0.30 | GCAMBRAU |      Gerald | 2007-10-15 00:00:00-0400 |   Cambrault | 011.44.1344.619268 | 11000.00
+         197 |           null |  KFEENEY |       Kevin | 2006-05-23 00:00:00-0400 |      Feeney |       650.507.9822 |  3000.00
+         102 |           null |  LDEHAAN |         Lex | 2001-01-13 00:00:00-0500 |     De Haan |       515.123.4569 | 17000.00
+         153 |           0.20 |   COLSEN | Christopher | 2006-03-30 00:00:00-0500 |       Olsen | 011.44.1344.498718 |  8000.00
+         129 |           null |  LBISSOT |       Laura | 2005-08-20 00:00:00-0400 |      Bissot |       650.124.5234 |  3300.00
+         160 |           0.30 |   LDORAN |      Louise | 2005-12-15 00:00:00-0500 |       Doran | 011.44.1345.629268 |  7500.00
+         107 |           null | DLORENTZ |       Diana | 2007-02-07 00:00:00-0500 |     Lorentz |       590.423.5567 |  4200.00
+         136 |           null | HPHILTAN |       Hazel | 2008-02-06 00:00:00-0500 |  Philtanker |       650.127.1634 |  2200.00
+         188 |           null |   KCHUNG |       Kelly | 2005-06-14 00:00:00-0400 |       Chung |       650.505.1876 |  3800.00
+         134 |           null |  MROGERS |     Michael | 2006-08-26 00:00:00-0400 |      Rogers |       650.127.1834 |  2900.00
+         181 |           null |  JFLEAUR |        Jean | 2006-02-23 00:00:00-0500 |      Fleaur |       650.507.9877 |  3100.00
+</pre>
 
 
-
-employees.write.format("org.apache.spark.sql.cassandra").options(Map( "table" -> "employees", "keyspace" -> "hr")).save()
-
-
-
-
-
-<h3>Query all departments, optionally returning employees by department</h3>
+<h3>Query 2: Query all departments, optionally returning employees by department</h3>
 
 We have a table for employees stored by department - EMPLOYEE_ID is the clustering column.
 
 <pre>
-DROP TABLE IF EXISTS EMPLOYEES_BY_DEPT;;
+DROP TABLE IF EXISTS EMPLOYEES_BY_DEPT;
 CREATE TABLE employees_by_dept (
- DEPT_ID            	bigint,
+ DEPARTMENT_ID            	bigint,
  DEPARTMENT_NAME        text static,
  EMPLOYEE_ID            bigint,
  FIRST_NAME             text ,
  LAST_NAME              text,
- PRIMARY KEY (DEPT_ID, EMPLOYEE_ID));
+ PRIMARY KEY (DEPARTMENT_ID, EMPLOYEE_ID));
 </pre>
 
 
-<h3>Query all jobs, optionally returning  employees by job</h3>
+For each department we store the department id, the name of the department, and then successive clustered columns of employees in that department.
+
+Similar to the example previously, we select employees by department from our SparkSQL tables:
+
+<pre lang="scala">
+scala> val depts_by_emp = sqlContext.sql("SELECT d.department_id, d.department_name, e.employee_id, e.first_name, e.last_name, e.email FROM empTable e, deptTable d where e.department_id=d.department_id")
+</pre>
+Confirmation output:
+<pre>
+depts_by_emp: org.apache.spark.sql.DataFrame = [department_id: decimal(4,0), department_name: string, employee_id: decimal(6,0), first_name: string, last_name: string, email: string]
+</pre>
+
+<pre>
+scala> depts_by_emp.printSchema()
+root
+ |-- department_id: decimal(4,0) (nullable = false)
+ |-- department_name: string (nullable = false)
+ |-- employee_id: decimal(6,0) (nullable = false)
+ |-- first_name: string (nullable = true)
+ |-- last_name: string (nullable = false)
+ |-- email: string (nullable = false)
+</pre>
+
+<pre lang="scala">
+scala> depts_by_emp.show()
++-------------+---------------+-----------+----------+-----------+--------+     
+|department_id|department_name|employee_id|first_name|  last_name|   email|
++-------------+---------------+-----------+----------+-----------+--------+
+|           40|Human Resources|        203|     Susan|     Mavris| SMAVRIS|
+|           50|       Shipping|        120|   Matthew|      Weiss|  MWEISS|
+|           50|       Shipping|        121|      Adam|      Fripp|  AFRIPP|
+|           50|       Shipping|        122|     Payam|   Kaufling|PKAUFLIN|
+|           50|       Shipping|        123|    Shanta|    Vollman|SVOLLMAN|
+|           50|       Shipping|        124|     Kevin|    Mourgos|KMOURGOS|
+|           50|       Shipping|        125|     Julia|      Nayer|  JNAYER|
+|           50|       Shipping|        126|     Irene|Mikkilineni|IMIKKILI|
+|           50|       Shipping|        127|     James|     Landry| JLANDRY|
+|           50|       Shipping|        128|    Steven|     Markle| SMARKLE|
+|           50|       Shipping|        129|     Laura|     Bissot| LBISSOT|
+|           50|       Shipping|        130|     Mozhe|   Atkinson|MATKINSO|
+|           50|       Shipping|        131|     James|     Marlow| JAMRLOW|
+|           50|       Shipping|        132|        TJ|      Olson| TJOLSON|
+|           50|       Shipping|        133|     Jason|     Mallin| JMALLIN|
+|           50|       Shipping|        134|   Michael|     Rogers| MROGERS|
+|           50|       Shipping|        135|        Ki|        Gee|    KGEE|
+|           50|       Shipping|        136|     Hazel| Philtanker|HPHILTAN|
+|           50|       Shipping|        137|    Renske|     Ladwig| RLADWIG|
+|           50|       Shipping|        138|   Stephen|     Stiles| SSTILES|
++-------------+---------------+-----------+----------+-----------+--------+
+only showing top 20 rows
+</pre>
 
 
-<h3>Query all managers, optionally returning  employees by manager</h3>
+
+
+
+
+
+<h3>Query 3: Query all jobs, optionally returning  employees by job</h3>
+
+
+<h3>Query 4: Query all managers, optionally returning  employees by manager</h3>
 
 
 
