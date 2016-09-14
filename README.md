@@ -586,7 +586,6 @@ For this exercise I will focus on the EMPLOYEES, JOBS and DEPARTMENTS tables.
 - This is how Cassandra can ensure that your queries with scale with the cluster (this is usually the opposite of the relational world where you start with your data, decide what queries you want to run against it, then index it to the eyeballs to support those queries).
 
 Remember that in a relational database maintaining those indexes is very expensive operation that becomes more expensive as the volume of data grows.
-In contrast...<<<
 
 - In the Cassandra world we start with the queries and then design the data model to support those queries. 
 - We want to pull the source data from Oracle and move it to the tables in Cassandra. 
