@@ -73,14 +73,12 @@ rpm --import http://rpm.datastax.com/rpm/repo_key
 
 We want to use Search (Solr) and Analytics (Spark) so we need to delete the default datacentre and restart the cluster (if its already running) in SearchAnalytics mode.
 <br>
-
 Stop the service if it's running.
 <pre>
 #  service dse stop
 Stopping DSE daemon : dse                                  [  OK  ]
 </pre>
 <br>
-
 Enable Solr and Spark by changing the flag from "0" to "1" in:
 <pre>
 # vi /etc/default/dse
@@ -94,7 +92,6 @@ SOLR_ENABLED=1
 SPARK_ENABLED=1
 </pre>
 <br>
-
 Delete the old (Cassandra-only) datacentre databases if they exist:
 <pre>
 # rm -rf /var/lib/cassandra/data/*
@@ -112,7 +109,6 @@ Now restart DSE:
 <pre>
 $ sudo service DSE restart
 </pre>
-
 <br>
 
 <H2>Identify Spark Master</h2>
@@ -123,8 +119,6 @@ $ dse client-tool spark master-address
 spark://127.0.0.1:7077
 </pre> 
 OK, let's go look at our source data in the Oracle database.
-
-
 <br>
 <h1>Oracle Database</h1>
 We're going to create our source data for this exercise using the scripts supplied by Oracle. 
