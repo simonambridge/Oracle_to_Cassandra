@@ -1,6 +1,6 @@
-# Migrating Relational Data From Oracle To Cassandra - using Spark DataFrames, SparkSQL and the spark-cassandra connector
-The objective of this exercise is to demonstrate how to migrate data from Oracle to Cassandra. I'll be using the DataFrame capability introduced in Apache Spark 1.3 to load data from tables in an Oracle database (12c) via Oracle's JDBC thin driver, to generate a result set, joining tables where necessary.
-The data will then be saved to Cassandra.
+# Migrating Relational Data From Oracle To DSE/Cassandra - using Spark DataFrames, SparkSQL and the spark-cassandra connector
+The objective of this exercise is to demonstrate how to migrate data from Oracle to DataStax Cassandra. I'll be using the DataFrame capability introduced in Apache Spark 1.3 to load data from tables in an Oracle database (12c) via Oracle's JDBC thin driver, to generate a result set, joining tables where necessary.
+The data will then be saved to DSE/Cassandra.
  
 <h2>Pre-requisites</h2>
 <h3> DataStax Enterprise (release 5.0.2 at time of publication)</h3>
@@ -190,7 +190,7 @@ PL/SQL procedure successfully completed.
 Log into SQL Plus as the HR user. 
 > If you're still logged in as sys you can change to the HR account by typing "connect hr/hr").
 
-The HR user has a simple schema consisting of 7 tables. The data is stored in a relational format, using foreign keys to look up into tables e.g. To find which department an employee belongs to, you use the value in the DEPARTMENT_ID column to look up a record in the DEPARTMENTS table to identify the department the employee belongs too. 
+The HR user has a simple schema consisting of 7 tables. The data is stored in a relational format, using foreign keys to look up into tables e.g. To find which department an employee belongs to, you use the value in the DEPARTMENT_ID column to look up a record in the DEPARTMENTS table to identify the department the employee belongs to. 
 You can walk through the model using the diagram below:
  
 ![alt text] (https://raw.githubusercontent.com/simonambridge/Oracle_to_Cassandra/master/Oracle_to_Cassandra_OSchema.png)
@@ -306,7 +306,7 @@ EMPLOYEE_ID FIRST_NAME           LAST_NAME            EMAIL                PHONE
         126 Irene                Mikkilineni          IMIKKILI             650.124.1224         28-SEP-06 ST_CLERK         2700                       120            50
 </pre>
 
-Let's walk through the schema to get familiar with the dat that we're going to migrate.
+Let's walk through the schema to get familiar with the data that we're going to migrate.
 For a moment let's just focus on employees reporting to a manager with ID=121:
 
 <pre>
@@ -388,11 +388,10 @@ SQL> select * from regions where region_id=2;
 
 <br>
 <h1>Using Spark To Read Oracle Data</h1>
-So all is looking good on the Oracle side. Now time to turn to Cassandra and Spark.
+So all is looking good on the Oracle side. Now time to turn to DSE/Cassandra and Spark.
 
 <h2>Download Oracle ojdbc7.jar</h2>
 We have to add the Oracle JDBC jar file to our Spark classpath so that Spark knows how to talk to the Oracle database.
-
 
 <br>
 <h2>Using The Oracle JDBC Driver</h2>
@@ -454,13 +453,13 @@ scala> val employees = sqlContext.load("jdbc", Map("url" -> "jdbc:oracle:thin:hr
 
 warning: method load in class SQLContext is deprecated: Use read.format(source).options(options).load(). This will be removed in Spark 2.0.
 </pre>
-Don't worry about the warning - I turned on the deprecation flag on command line when I start the REPL.
+Don't worry about the warning - I turned on the deprecation flag on command line when I started the REPL.
 
 The Spark REPL responds with:
 <pre>
 employees: org.apache.spark.sql.DataFrame = [EMPLOYEE_ID: decimal(6,0), FIRST_NAME: string, LAST_NAME: string, EMAIL: string, PHONE_NUMBER: string, HIRE_DATE: timestamp, JOB_ID: string, SALARY: decimal(8,2), COMMISSION_PCT: decimal(2,2), MANAGER_ID: decimal(6,0), DEPARTMENT_ID: decimal(4,0)]
 </pre>
-
+All good so far.
 
 <h2>Examining The DataFrame</h2>
 We can use the nifty printSchema DataFrame method to show us the schema in the DataFrame that we created.
@@ -606,13 +605,11 @@ only showing top 20 rows
 </pre>
 <br>
 
-
-
 <h2>Cassandra Data Modelling</h2>
 Some basics:
 <ul>
   <li>
-    Cassandra is a NoSQL distributed database so we cannot use the table joins that are in the relational Oracle HR database schema.
+    DSE/Cassandra is a NoSQL distributed database so we cannot use the table joins that are in the relational Oracle HR database schema.
   </li>
   <li>
     We need to de-normalise the HR schema, removing foreign keys and look-up tables - these are relational concepts that don't exist in the distributed world.
@@ -633,7 +630,7 @@ For this demonstration I will focus on the EMPLOYEES and DEPARTMENTS tables.
     Cassandra data modelling is a query-driven process - you first decide the queries that you wish to run, then build your data model around those queries. 
   </li>
   <li>
-    This is how Cassandra can ensure that your queries with scale with the cluster (this is usually the opposite of the relational world where you start with your data, decide what queries you want to run against it, then index it to the eyeballs to support those queries).
+    This is how Cassandra can ensure that your queries scale with the cluster (this is usually the opposite of the relational world where you start with your data, decide what queries you want to run against it, then index it to the eyeballs to support those queries).
   </li>
 </ul>
 
@@ -673,15 +670,15 @@ In Cassandra we will create the following tables:
 
 <h3>Create HR KeySpace In Cassandra</h3>
 The first thing that we need to do in Cassandra is create a keyspace to contain the tables that we will create. I'm using a replication factor of 1 because I have one node in my development cluster. For most production deployments we recommend a multi-datacenter Active-Active HA setup across geographical regions using NetworkTopologyStrategy with RF=3:
+
 Log into cqlsh 
 > If you didn't change the IP defaults in cassandra.yaml then just type 'cqlsh' - if you changed the IP to be the host IP then you may need to supply the hostname e.g. 'cqlsh <hostname>'.
 
-From the cqlsh prompt, create the keyspace:
+From the cqlsh prompt, create the keyspace to hold our Cassandra HR tables:
 <pre>
 CREATE KEYSPACE IF NOT EXISTS HR WITH REPLICATION = {'class': 'SimpleStrategy', 'replication_factor': 1 };
 USE HR;
 </pre>
-This table will store information on employees, and for each employee there is a one to many relationship for the departments that employee manages. We could use a clustering column for the department(s) managed by that employee.
 
 <h3>Create Employees Table</h3>
 
