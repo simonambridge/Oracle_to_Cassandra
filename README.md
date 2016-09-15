@@ -111,6 +111,29 @@ $ sudo service DSE restart
 </pre>
 <br>
 
+After a few minutes use nodetool to check that all is up and running (check for "UN" next to the IP address):
+<pre>
+$ nodetool status
+Datacenter: SearchAnalytics
+===========================
+Status=Up/Down
+|/ State=Normal/Leaving/Joining/Moving
+--  Address    Load       Owns    Host ID                               Token                                    Rack
+UN  127.0.0.1  346.89 KB  ?       8e6fa3db-9018-47f0-96df-8c78067fddaa  6840808785095143619                      rack1
+
+Note: Non-system keyspaces don't have the same replication settings, effective ownership information is meaningless
+</pre>
+You should also check that you can log into cqlsh:
+<pre>
+$ cqlsh
+Connected to Test Cluster at 127.0.0.1:9042.
+[cqlsh 5.0.1 | Cassandra 3.0.7.1159 | DSE 5.0.1 | CQL spec 3.4.0 | Native protocol v4]
+Use HELP for help.
+cqlsh> 
+</pre>
+Type exist in cqlsh to return to the shell prompt.
+<br>
+
 <H2>Identify Spark Master</h2>
 We use the new DSE 5.0 format for the dse tool to get the address of the Spark Master in our cluster. 
 As we are using a single node for our cluster it will be no surprise that the Spark Master is also on our single node!
