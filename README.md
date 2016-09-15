@@ -688,7 +688,7 @@ So for Query 1 we'll also move the Department, Manager and Job data out of the E
 For Query 2 we'll use EMPLOYEES_BY_DEPARTMENT to query Departments and Employees by Department.
 
 <h3>Query 1: Query All Employees on EMPLOYEE_ID</h3>
-This table satisfies query 1:
+Create the table we use to hold employees in Cassandra:
 <pre lang="sql">
 DROP TABLE IF EXISTS employees;
 
@@ -703,10 +703,19 @@ CREATE TABLE employees (
  commission_pct         	decimal,
  PRIMARY KEY (employee_id));
 </pre>
+This table satisfies query 1 we can now do an extremely fast retrieval using a partition key to access our data:
+<pre lang="sql">
+cqlsh:hr> select * from employees where employee_id=188;
 
-At this point go back to the Spark REPL for the following steps:
+ employee_id | commission_pct | email  | first_name | hire_date                | last_name | phone_number | salary
+-------------+----------------+--------+------------+--------------------------+-----------+--------------+---------
+         188 |           null | KCHUNG |      Kelly | 2005-06-14 00:00:00-0400 |     Chung | 650.505.1876 | 3800.00
+</pre>
 
-If you try to save to Cassandra now (using the Spark-Cassandra connector) it will fail with an error message saying that columns don't exist e.g. "EMPLOYEE_ID", "FIRST_NAME". This is because the connector expects the column case to match the column case in the dataframe and in the Cassandra table. In Cassandra they're always in lower case, so the dataframe must match. Currently the data frame is in upper case.<p>
+<h2>Prepare The Data And Save It To DSE/Cassandra</h2>
+At this point go back to the Spark shell/REPL for the following steps:
+
+If you try to save your dataframe to Cassandra now (using the Spark-Cassandra connector) it will fail with an error message saying that columns don't exist e.g. "EMPLOYEE_ID", "FIRST_NAME" - even though they're there. This is because the connector expects the column case in the dataframe to match the column case in the Cassandra table. In Cassandra column names are always in lower case, so the dataframe names must match.<p>
 So we need to modify our dataframe schema....
 Here's a reminder of our raw employees dataframe schema again:
 
