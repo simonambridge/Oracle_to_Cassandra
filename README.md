@@ -28,10 +28,9 @@ As we will connect from Spark, using the Oracle jdbc driver, to the "orcl" datab
 
 Now on to installing DataStax Enterprise and playing with some data!
 <p>
---
 <H1>Set Up DataStax Components</H1>
 <br>
-DSE installation instructions for DSE are provided at the top of this doc. I'll show the instructions for Red Hat/CentOS/Fedora here. I'm using an Oracle Enterprise Linux VirtualBox instance.
+Installation instructions for DSE are provided at the top of this doc. I'll show the instructions for Red Hat/CentOS/Fedora here. I'm using an Oracle Enterprise Linux VirtualBox instance.
 <h2>Add The DataStax Repo</H2>
 As root create ```/etc/yum.repos.d/datastax.repo```
 <pre># vi /etc/yum.repos.d/datastax.repo
