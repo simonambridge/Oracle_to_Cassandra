@@ -172,7 +172,7 @@ PL/SQL procedure successfully completed.
 Log into SQL Plus as the HR user. 
 > If you're still logged in as sys you can change to the HR account by typing "connect hr/hr").
 
-There is a simple relational using foreign keys to look up into tables e.g. for an employee you use the value in the DEPARTMENT_ID column look up a record in the DEPARTMENTS table to identify the department the employee belongs too. 
+The HR user has a simple schema consisting of 7 tables. The data is stored in a relational format, using foreign keys to look up into tables e.g. To find which department an employee belongs to, you use the value in the DEPARTMENT_ID column to look up a record in the DEPARTMENTS table to identify the department the employee belongs too. 
 You can walk through the model using the diagram below:
  
 ![alt text] (https://raw.githubusercontent.com/simonambridge/Oracle_to_Cassandra/master/Oracle_to_Cassandra_OSchema.png)
