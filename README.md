@@ -27,6 +27,7 @@ As we will connect from Spark, using the Oracle jdbc driver, to the "orcl" datab
 <br>
 
 Now on to installing DataStax Enterprise and playing with some data!
+<p>
 --
 <H1>Set Up DataStax Components</H1>
 <br>
