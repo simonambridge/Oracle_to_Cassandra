@@ -790,7 +790,7 @@ root
  |-- salary: decimal(8,2) (nullable = true)
  |-- commission_pct: decimal(2,2) (nullable = true)
 </pre>
-<h3>Write the dataframe to Cassandra</h3>
+<h3>Write the Employees dataframe to Cassandra</h3>
 Now we can save the data to a Cassandra table using the Spark-Cassandra connector:
 <pre lang="scala">
 scala> emps_lc_subset.write.format("org.apache.spark.sql.cassandra").options(Map( "table" -> "employees", "keyspace" -> "hr")).save()
@@ -888,7 +888,7 @@ scala> emp_by_dept.show()
 only showing top 20 rows
 </pre>
 
-<h3>Write the dataframe to Cassandra</h3>
+<h3>Write the Employees_By_Department dataframe to Cassandra</h3>
 Now save the employees_by_dept data to Cassandra using the Spark-Cassandra connector:
 <pre lang="scala">
 scala> emp_by_dept.write.format("org.apache.spark.sql.cassandra").options(Map( "table" -> "employees_by_dept", "keyspace" -> "hr")).save()
