@@ -651,10 +651,10 @@ Remember that in a relational database maintaining those indexes is very expensi
 Our queries are:
 <ul>
   <li>
-    Query all employees on EMPLOYEE_ID
+    Query1: query all employees on EMPLOYEE_ID
   </li>
   <li>
-    Query all departments on DEPARTMENT_ID, and query Employees by Department
+    Query2: query all departments on DEPARTMENT_ID, and query Employees by Department
   </li>
 </ul>
 
@@ -682,10 +682,10 @@ USE HR;
 
 <h3>Create Employees Table</h3>
 
-We will denormalise and move the department data to a separate table. Data duplication in Cassandra is not a bad thing. It's quicker than updating indexes and disk is cheap, and Cassandra writes are fast!
+De-normalising and potentially duplicating data in Cassandra is not a bad thing. It's quicker than updating indexes, and disk is cheap, and Cassandra writes are fast!
 
-So we'll move the manager data out of the EMPLOYEES table and use the EMPLOYEES table purely for employee personal data - and put the department manager details in another table altogether.
-
+So for Query 1 we'll also move the Department, Manager and Job data out of the EMPLOYEES table and use the EMPLOYEES table purely for employee personal data. 
+For Query 2 we'll use EMPLOYEES_BY_DEPARTMENT to query Departments and Employees by Department.
 
 <h3>Query 1: Query All Employees on EMPLOYEE_ID</h3>
 This table satisfies query 1:
@@ -828,7 +828,7 @@ CREATE TABLE employees_by_dept (
 
 For each department we store the department id and the name of the department (as a partioning key and a static column for that partitioning key), and then for each department partition key there will be successive clustered columns of employees in that department.
 
-Similar to the example previously, we select employees by department from our SparkSQL tables:
+Similar to the example used previously, we select employees-by-department by joining our SparkSQL tables, this time on DEPARTMENT_ID:
 
 <pre lang="scala">
 scala> val emp_by_dept = sqlContext.sql("SELECT d.department_id, d.department_name, e.employee_id, e.first_name, e.last_name FROM empTable e, deptTable d where e.department_id=d.department_id")
