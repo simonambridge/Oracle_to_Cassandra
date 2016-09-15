@@ -199,7 +199,7 @@ JOB_HISTORY
 There are seven tables in the HR schema. I'm going to look at five of them.
 
 <h3>1. Table EMPLOYEES</h3>
-<pre>
+Foreign keys on JOB_ID, DEPARTMENT_ID and MANAGER_ID.<pre>
 SQL> desc employees
 
  Name                    Null?    Type
@@ -230,7 +230,7 @@ SQL> desc jobs
 </pre>
 
 <h3>3. Table DEPARTMENTS</h3>
-
+Foreign keys on MANAGER_ID and LOCATION_ID.
 <pre>
 SQL> desc departments
 
@@ -243,7 +243,7 @@ SQL> desc departments
 </pre>
 
 <h3>4. Table LOCATIONS</h3>
-
+Foreign key on COUNTRY_ID.
 <pre>
 SQL> desc locations
 
@@ -258,7 +258,7 @@ SQL> desc locations
 </pre>
 
 <h3>5. Table COUNTRIES</h3>
-
+Foreign key on REGION_ID.
 <pre>
 SQL> desc countries
 
@@ -428,12 +428,15 @@ import java.io._
 <br>
 <h2>Read Oracle Data Into A Spark DataFrame</h2>
 
-And try the data load from Oracle again - all good and no errors:
+And try the data load from Oracle - all good and no errors:
 <pre lang="scala">
 scala> val employees = sqlContext.load("jdbc", Map("url" -> "jdbc:oracle:thin:hr/hr@localhost:1521/orcl", "dbtable" -> "employees"))
+
 <console>:67: warning: method load in class SQLContext is deprecated: Use read.format(source).options(options).load(). This will be removed in Spark 2.0.
          val employees = sqlContext.load("jdbc", Map("url" -> "jdbc:oracle:thin:hr/hr@localhost:1521/orcl", "dbtable" -> "employees"))
 </pre>
+Don't worry about the warning - I turned on the deprecation flag on command line when I start the REPL.
+
 The Spark REPL responds with:
 <pre>
 employees: org.apache.spark.sql.DataFrame = [EMPLOYEE_ID: decimal(6,0), FIRST_NAME: string, LAST_NAME: string, EMAIL: string, PHONE_NUMBER: string, HIRE_DATE: timestamp, JOB_ID: string, SALARY: decimal(8,2), COMMISSION_PCT: decimal(2,2), MANAGER_ID: decimal(6,0), DEPARTMENT_ID: decimal(4,0)]
@@ -487,9 +490,10 @@ scala> employees.show()
 only showing top 20 rows
 </pre>
 
-Again, this time with Departments:
+Let's load some data from the Oracle table Departments:
 <pre lang="scala">
 scala> val departments = sqlContext.load("jdbc", Map("url" -> "jdbc:oracle:thin:hr/hr@localhost:1521/orcl", "dbtable" -> "departments"))
+
 <console>:67: warning: method load in class SQLContext is deprecated: Use read.format(source).options(options).load(). This will be removed in Spark 2.0.
          val departments = sqlContext.load("jdbc", Map("url" -> "jdbc:oracle:thin:hr/hr@localhost:1521/orcl", "dbtable" -> "departments"))                                      ^
 </pre>
@@ -497,7 +501,7 @@ REPL responds:
 <pre lang="scala">
 departments: org.apache.spark.sql.DataFrame = [DEPARTMENT_ID: decimal(4,0), DEPARTMENT_NAME: string, MANAGER_ID: decimal(6,0), LOCATION_ID: decimal(4,0)]
 </pre>
-View Departments schema:
+View the Departments schema:
 <pre lang="scala">
 scala> departments.printSchema()
 root
@@ -506,7 +510,7 @@ root
  |-- MANAGER_ID: decimal(6,0) (nullable = true)
  |-- LOCATION_ID: decimal(4,0) (nullable = true)
 </pre>
-Read records from teh Departments DataFrame:
+Read records from the Departments DataFrame:
 
 <pre lang="scala">
 scala> departments.show()
@@ -539,7 +543,7 @@ only showing top 20 rows
 
 
 <H2>Multi-Table Joins In SparkSQL</h2>
-We may well need to perform some element of data transformation when we migrate data from a relational database to a NoSQL database like Apache Cassandra. Transformation typically involves deduplication of data and to do this we frequently want to join data between tables. Let's see how we do that in Spark.
+We may well need to perform some element of data transformation when we migrate data from a relational database to a NoSQL database like Apache Cassandra. Transformation typically involves duplication and de-normalisation of data and to do this we frequently want to join data between tables. Let's see how we can do that in Spark.
 
 <h3>Create SparkSQL Tables From The DataFrames</h3>
 <pre lang="scala">
@@ -550,6 +554,9 @@ scala> departments.registerTempTable("deptTable")
 Now query empTable and deptTable joining on DEPARTMENT_ID:
 <pre lang="scala">
 scala> val depts_by_emp = sqlContext.sql("SELECT employee_id, department_name FROM empTable e, deptTable d where e.department_id=d.department_id")
+</pre>
+Response:
+<pre lang="scala">
 depts_by_emp: org.apache.spark.sql.DataFrame = [employee_id: decimal(6,0), department_name: string]
 </pre>
 We can look at the results of the query:
@@ -604,17 +611,13 @@ Remember that in a relational database maintaining those indexes is very expensi
 Our queries are:
 - Query all employees on EMPLOYEE_ID
 - Query all departments, optionally returning employees by department
-- Query all jobs, optionally returning  employees by job
-- Query all managers, optionally returning  employees by manager
 
 In Cassandra we will create the following tables:
 - A table for employees, similar to HR.EMPLOYEES but without the foreign keys to JOB_ID, MANAGER_ID and DEPARTMENT_ID. 
 - We will replace the HR.DEPARTMENTS lookup table - we will use EMPLOYEES_BY_DEPARTMENT with a PK on DEPARTMENT_ID, clustered on EMPLOYEE_ID
-- We will replace the HR.JOBS lookup table - we will use EMPLOYEES_BY_JOB with a PK on JOB_ID, clustered on EMPLOYEE_ID
-- We will replace the FK on MANAGER_ID in the EMPLOYEES table - instead we will use an EMPLOYEES_BY_MANAGER table with a PK on MANAGER, clustered on EMPLOYEE_ID
 
 <h3>Create HR KeySpace In Cassandra</h3>
-First thing we need to do in Cassandra is create a keyspace to contain the tables that we will create:
+The first thing that we need to do in Cassandra is create a keyspace to contain the tables that we will create. I'm using a replication factor of 1 because I have one node in my development cluster. For most production deployments we recommend a multi-datacenter Active-Active HA setup across geographical regions using NetworkTopologyStrategy with RF=3.:
 <pre>
 CREATE KEYSPACE IF NOT EXISTS HR WITH REPLICATION = {'class': 'SimpleStrategy', 'replication_factor': 1 };
 USE HR;
@@ -661,7 +664,7 @@ CREATE TABLE employees (
 </pre>
 
 
-If you try to save to Cassandra now using the Spark-Cassandra connector it will fail with an error message saying that columns don't exist e.g. "EMPLOYEE_ID", "FIRST_NAME". This is because the connector expects the column case to match in the dataframe and in the Cassandra table. In cassandra theyre in lower case so the dataframe must match.
+If you try to save to Cassandra now using the Spark-Cassandra connector it will fail with an error message saying that columns don't exist e.g. "EMPLOYEE_ID", "FIRST_NAME". This is because the connector expects the column case to match in the dataframe and in the Cassandra table. In cassandra they're in lower case, so the dataframe must match. Currently the data frame is in upper case.
 Here's our schema again:
 
 <pre lang="scala">
@@ -679,7 +682,7 @@ root
  |-- MANAGER_ID: decimal(6,0) (nullable = true)
  |-- DEPARTMENT_ID: decimal(4,0) (nullable = true)
 </pre>
-We can create a list of column names in lower case matching the dataframe order, creating a new dataframe "emps_lc" in the process.
+We want to change those column names to lower case - so we create a list of column names in lower case matching the dataframe order, creating a new dataframe "emps_lc" in the process.
 We rename the columns in the dataframe like this:
 
 <pre lang="scala">
@@ -712,7 +715,7 @@ root
 
 There are some columns in the dataframe that we don't need for this step. We simply create a new dataframe containing the columns that we do want to use.
 
-We should still have the SparkSQL table empTable that we defined earlier based on the employees dataframe. We'll select the columns that we want for the Cassandra table into a new dataframe - you can call dataframes what you want:
+We should still have the SparkSQL table empTable that we defined earlier based on the employees dataframe. We'll select the columns that we want for the Cassandra table into a new dataframe called "emps_lc_subset":
 
 <pre lang="scala">
 scala> val emps_lc_subset = sqlContext.sql("SELECT employee_id, first_name, last_name, email, phone_number, hire_date, salary, commission_pct FROM empTable")
@@ -721,7 +724,7 @@ emps_lc_subset: org.apache.spark.sql.DataFrame = [employee_id: decimal(6,0), fir
 
 </pre>
 
-And we have the schema we're looking for to match the Cassandra target table.
+And we now have the schema we're looking for to match the Cassandra target table.
 <pre lang="scala">
 scala> emps_lc_subset.printSchema()
 root
@@ -736,11 +739,12 @@ root
  |-- commission_pct: decimal(2,2) (nullable = true)
 </pre>
 <h3>Write the dataframe to Cassandra</h3>
+Now we can save the data to a Cassandra table using the Spark-Cassandra connector:
 <pre lang="scala">
 scala> emps_lc_subset.write.format("org.apache.spark.sql.cassandra").options(Map( "table" -> "employees", "keyspace" -> "hr")).save()
 </pre>
 
-And in cqlsh the records are there:
+And if we hop over to cqlsh we can see the records are there:
 <pre>
 cqlsh:hr> select * from employees;
 
@@ -764,7 +768,8 @@ cqlsh:hr> select * from employees;
 
 <h3>Query 2: Query All Departments And Employees by Department</h3>
 
-We have a table for employees stored by department - EMPLOYEE_ID is the clustering column.
+To satisfy Query 2 we have a table for Employees stored by Department.
+DEPARTMENT_ID is the partitioning key, EMPLOYEE_ID is the clustering column.
 
 <pre>
 DROP TABLE IF EXISTS EMPLOYEES_BY_DEPT;
@@ -778,7 +783,7 @@ CREATE TABLE employees_by_dept (
 </pre>
 
 
-For each department we store the department id, the name of the department, and then successive clustered columns of employees in that department.
+For each department we store the department id and the name of the department (as a partioning key and a static column for that partitioning key), and then for each department partition key there will be successive clustered columns of employees in that department.
 
 Similar to the example previously, we select employees by department from our SparkSQL tables:
 
@@ -832,6 +837,7 @@ only showing top 20 rows
 </pre>
 
 <h3>Write the dataframe to Cassandra</h3>
+Now save the employees_by_dept data to Cassandra using the Spark-Cassandra connector:
 <pre lang="scala">
 scala> emp_by_dept.write.format("org.apache.spark.sql.cassandra").options(Map( "table" -> "employees_by_dept", "keyspace" -> "hr")).save()
 </pre>
@@ -890,15 +896,13 @@ cqlsh:hr> select department_name, first_name, last_name from employees_by_dept w
 
 </pre>
 
-
-
-
 <h3>Query 3: Query All Jobs, And Employees By Job</h3>
 The second part of this requirement was to be able to optionally return Employees by Job</h3>
 With the techniques described above you should now be able to have a go at doing the same thing yourself with the Jobs and Employees tables.
+(hint: replace the HR.JOBS lookup table - use EMPLOYEES_BY_JOB with a PK on JOB_ID, clustered on EMPLOYEE_ID)
 
 <h3>Query 4: Query All Managers, And Employees By Manager</h3>
 If you're a real over-achiever why not have a go at using the Manager column in the Employees table :)
 The second part of this requirement was to be able to optionally return employees by manager.
-
+(hint: replace the old FK on MANAGER_ID in the EMPLOYEES table - use an EMPLOYEES_BY_MANAGER table with a PK on MANAGER, clustered on EMPLOYEE_ID)
 
