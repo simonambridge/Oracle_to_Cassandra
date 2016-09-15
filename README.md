@@ -102,12 +102,17 @@ Delete the old (Cassandra-only) datacentre databases if they exist:
 # rm -rf /var/lib/cassandra/commitlog/*
 # rm -rf /var/lib/cassandra/hints/*
 </pre>
-<br>
 
 Remove the old system.log if it exists:
 <pre>
 # rm -rf /var/log/cassandra/system.log 
 </pre>
+
+Now restart DSE:
+<pre>
+$ sudo service DSE restart
+</pre>
+
 <br>
 
 <H2>Identify Spark Master</h2>
