@@ -940,12 +940,12 @@ cqlsh:hr> select department_name, first_name, last_name from employees_by_dept w
 </pre>
 
 <h3>Query 3: Query All Jobs, And Employees By Job</h3>
-The second part of this requirement was to be able to optionally return Employees by Job</h3>
+Query 3 asks for a list of all job titles and descriptions. The second part of this query requirement was to be able to return Employees by Job</h3>
 With the techniques described above you should now be able to have a go at doing the same thing yourself with the Jobs and Employees tables.
 (hint: replace the HR.JOBS lookup table - use EMPLOYEES_BY_JOB with a PK on JOB_ID, clustered on EMPLOYEE_ID)
 
 <h3>Query 4: Query All Managers, And Employees By Manager</h3>
 If you're a real over-achiever why not have a go at using the Manager column in the Employees table :)
-The second part of this requirement was to be able to optionally return employees by manager.
+We need to be able to query all Managers. The second part of this query requirement was to be able to return Employees by Manager.
 (hint: replace the old FK on MANAGER_ID in the EMPLOYEES table - use an EMPLOYEES_BY_MANAGER table with a PK on MANAGER, clustered on EMPLOYEE_ID)
 
