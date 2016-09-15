@@ -12,6 +12,7 @@ You'll need a working installation of DataStax Enterprise.
 To setup your environment, you'll also need the following resources:
 
 - Python 2.7
+- Java 8
 - For Red Hat, CentOS and Fedora, install EPEL (Extra Packages for Enterprise Linux).
 - An Oracle database:
  - In my example the database name is orcl
