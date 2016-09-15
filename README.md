@@ -3,8 +3,8 @@ The objective of this exercise is to demonstrate how to migrate data from Oracle
 The data will then be saved to DSE/Cassandra.
  
 <h2>Pre-requisites</h2>
-<h3> DataStax Enterprise (release 5.0.2 at time of publication)</h3>
-You'll need a working installation of DataStax Enterprise.
+<h3> DataStax Enterprise</h3>
+You'll need a working installation of DataStax Enterprise. I've used release 5.0.1  here, release 5.0.2 latest available at time of publication.
 
 - Ubuntu/Debian - https://docs.datastax.com/en/datastax_enterprise/5.0/datastax_enterprise/install/installDEBdse.html
 - Red Hat/Fedora/CentOS/Oracle Linux - https://docs.datastax.com/en/datastax_enterprise/5.0/datastax_enterprise/install/installRHELdse.html
@@ -24,7 +24,7 @@ I've used ojdbc7.jar which is certified for use with both JDK7 and JDK8
 In my 12c Oracle VM Firefox this downloaded to /app/oracle/downloads/ so you'll see the path referenced in the instructions below.
 
 
-As we will connect from Spark, using the Oracle jdbc driver, to the "orcl" database on TNS port 1521, all these components must be working correctly.
+As we will connect from Spark, using the Oracle jdbc driver, to the "orcl" database on TNS port 1521, and then to Cassandra, all these components must be working correctly.
 <br>
 
 Now on to installing DataStax Enterprise and playing with some data!
@@ -59,14 +59,14 @@ rpm --import http://rpm.datastax.com/rpm/repo_key
 # yum install dse-full-5.0.1-1
 </pre>
 
-<h3>DataStax OpsCenter</h3>
+<h3>DataStax OpsCenter - I got 6.0.2.1</h3>
 <pre>
-# yum install opscenter --> 6.0.2.1
+# yum install opscenter
 </pre>
 
-<h3>DataStax OpsCenter Agent</h3>
+<h3>DataStax OpsCenter Agent - I got 6.0.2.1</h3>
 <pre>
-# yum install datastax-agent --> 6.0.2.1
+# yum install datastax-agent
 </pre>
 <br>
 
