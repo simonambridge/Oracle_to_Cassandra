@@ -199,7 +199,9 @@ JOB_HISTORY
 There are seven tables in the HR schema. I'm going to look at five of them.
 
 <h3>1. Table EMPLOYEES</h3>
-Foreign keys on JOB_ID, DEPARTMENT_ID and MANAGER_ID.<pre>
+Foreign keys on JOB_ID, DEPARTMENT_ID and MANAGER_ID.
+
+<pre>
 SQL> desc employees
 
  Name                    Null?    Type
