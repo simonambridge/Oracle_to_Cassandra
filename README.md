@@ -639,7 +639,7 @@ Our queries are:
     Query all employees on EMPLOYEE_ID
   </li>
   <li>
-    Query all departments, optionally returning employees by department
+    Query all departments on DEPARTMENT_ID, and query Employees by Department
   </li>
 </ul>
 
@@ -654,7 +654,11 @@ In Cassandra we will create the following tables:
 </ul>
 
 <h3>Create HR KeySpace In Cassandra</h3>
-The first thing that we need to do in Cassandra is create a keyspace to contain the tables that we will create. I'm using a replication factor of 1 because I have one node in my development cluster. For most production deployments we recommend a multi-datacenter Active-Active HA setup across geographical regions using NetworkTopologyStrategy with RF=3.:
+The first thing that we need to do in Cassandra is create a keyspace to contain the tables that we will create. I'm using a replication factor of 1 because I have one node in my development cluster. For most production deployments we recommend a multi-datacenter Active-Active HA setup across geographical regions using NetworkTopologyStrategy with RF=3:
+Log into cqlsh 
+> If you didn't change the IP defaults in cassandra.yaml then just type 'cqlsh' - if you changed the IP to be the host IP then you may need to supply the hostname e.g. 'cqlsh <hostname>'.
+
+From the cqlsh prompt, create the keyspace:
 <pre>
 CREATE KEYSPACE IF NOT EXISTS HR WITH REPLICATION = {'class': 'SimpleStrategy', 'replication_factor': 1 };
 USE HR;
@@ -662,24 +666,8 @@ USE HR;
 This table will store information on employees, and for each employee there is a one to many relationship for the departments that employee manages. We could use a clustering column for the department(s) managed by that employee.
 
 <h3>Create Employees Table</h3>
-For each employee their first name, last name, email address etc is static data - so we can define them as static columns that belong to the partition key, not the clustering columns.
 
-<pre>
-CREATE TABLE employees (
- EMPLOYEE_ID            	bigint,
- FIRST_NAME             	text  static,
- LAST_NAME              	text static,
- EMAIL                  	text static,
- PHONE_NUMBER           	text static,
- HIRE_DATE              	text static,
- SALARY                 	decimal static,
- COMMISSION_PCT         	decimal static,
- MANAGES_DEPT_ID     		bigint,            <-- clustering cols start here
- MANAGES_DEPT_NAME	        text,
- PRIMARY KEY ((EMPLOYEE_ID), MANAGES_DEPT_ID));
-</pre>
-
-Alternatively we can completely denormalise and move the department data to a separate table. Data duplication in Cassandra is not a bad thing. It's quicker than updating indexes and disk is cheap, and Cassandra writes are fast!
+We will denormalise and move the department data to a separate table. Data duplication in Cassandra is not a bad thing. It's quicker than updating indexes and disk is cheap, and Cassandra writes are fast!
 
 So we'll move the manager data out of the EMPLOYEES table and use the EMPLOYEES table purely for employee personal data - and put the department manager details in another table altogether.
 
@@ -687,22 +675,25 @@ So we'll move the manager data out of the EMPLOYEES table and use the EMPLOYEES 
 <h3>Query 1: Query All Employees on EMPLOYEE_ID</h3>
 This table satisfies query 1:
 <pre lang="sql">
-DROP TABLE IF EXISTS EMPLOYEES;
+DROP TABLE IF EXISTS employees;
+
 CREATE TABLE employees (
- EMPLOYEE_ID            	bigint,
- FIRST_NAME             	text ,
- LAST_NAME              	text,
- EMAIL                  	text,
- PHONE_NUMBER           	text,
- HIRE_DATE              	text,
- SALARY                 	decimal,
- COMMISSION_PCT         	decimal,
- PRIMARY KEY (EMPLOYEE_ID));
+ employee_id            	bigint,
+ first_name             	text ,
+ last_name              	text,
+ email                  	text,
+ phone_number           	text,
+ hire_date              	text,
+ salary                 	decimal,
+ commission_pct         	decimal,
+ PRIMARY KEY (employee_id));
 </pre>
 
+At this point go back to the Spark REPL for the following steps:
 
-If you try to save to Cassandra now using the Spark-Cassandra connector it will fail with an error message saying that columns don't exist e.g. "EMPLOYEE_ID", "FIRST_NAME". This is because the connector expects the column case to match in the dataframe and in the Cassandra table. In cassandra they're in lower case, so the dataframe must match. Currently the data frame is in upper case.
-Here's our schema again:
+If you try to save to Cassandra now (using the Spark-Cassandra connector) it will fail with an error message saying that columns don't exist e.g. "EMPLOYEE_ID", "FIRST_NAME". This is because the connector expects the column case to match the column case in the dataframe and in the Cassandra table. In Cassandra they're always in lower case, so the dataframe must match. Currently the data frame is in upper case.<p>
+So we need to modify our dataframe schema....
+Here's a reminder of our raw employees dataframe schema again:
 
 <pre lang="scala">
 scala> employees.printSchema()
@@ -732,7 +723,7 @@ scala> val emps_lc = employees.toDF(newNames: _*)
 emps_lc: org.apache.spark.sql.DataFrame = [employee_id: decimal(6,0), first_name: string, last_name: string, email: string, phone_number: string, hire_date: timestamp, job_Id: string, salary: decimal(8,2), commission_pct: decimal(2,2), manager_id: decimal(6,0), department_id: decimal(4,0)]
 </pre>
 
-The schema in our new dataframe is in lower case:
+The schema in our new dataframe is in lower case - Yay!
 <pre lang="scala">
 scala> emps_lc.printSchema()
 root
@@ -750,7 +741,7 @@ root
 </pre>
 
 
-There are some columns in the dataframe that we don't need for this step. We simply create a new dataframe containing the columns that we do want to use.
+There are some columns in the dataframe that we don't need for this step. We simply create a new dataframe containing just the columns that we do want to use.
 
 We should still have the SparkSQL table empTable that we defined earlier based on the employees dataframe. We'll select the columns that we want for the Cassandra table into a new dataframe called "emps_lc_subset":
 
