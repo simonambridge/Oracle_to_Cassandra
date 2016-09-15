@@ -1,5 +1,5 @@
 # Migrating Relational Data From Oracle To Cassandra - using Spark DataFrames, SparkSQL and the spark-cassandra connector
-The objective of this exercise is to demonstrate how to migrate data from Oracle to Cassandra. I'll be using the DatFrame capability introduced in Apache Spark 1.3 to load data from tables in an Oracle database (12c) via Oracle's JDBC thin driver, to generate a result set, joining tables where necessary.
+The objective of this exercise is to demonstrate how to migrate data from Oracle to Cassandra. I'll be using the DataFrame capability introduced in Apache Spark 1.3 to load data from tables in an Oracle database (12c) via Oracle's JDBC thin driver, to generate a result set, joining tables where necessary.
 The data will then be saved to Cassandra.
  
 <h2>Pre-requisites</h2>
