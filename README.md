@@ -434,8 +434,7 @@ And try the data load from Oracle - all good and no errors:
 <pre lang="scala">
 scala> val employees = sqlContext.load("jdbc", Map("url" -> "jdbc:oracle:thin:hr/hr@localhost:1521/orcl", "dbtable" -> "employees"))
 
-<console>:67: warning: method load in class SQLContext is deprecated: Use read.format(source).options(options).load(). This will be removed in Spark 2.0.
-         val employees = sqlContext.load("jdbc", Map("url" -> "jdbc:oracle:thin:hr/hr@localhost:1521/orcl", "dbtable" -> "employees"))
+warning: method load in class SQLContext is deprecated: Use read.format(source).options(options).load(). This will be removed in Spark 2.0.
 </pre>
 Don't worry about the warning - I turned on the deprecation flag on command line when I start the REPL.
 
@@ -445,7 +444,7 @@ employees: org.apache.spark.sql.DataFrame = [EMPLOYEE_ID: decimal(6,0), FIRST_NA
 </pre>
 
 
-<h2>Examining The DatFrame</h2>
+<h2>Examining The DataFrame</h2>
 We can use the nifty printSchema DataFrame method to show us the schema in the DataFrame that we created.
 <pre lang="scala">
 scala> employees.printSchema()
@@ -495,9 +494,6 @@ only showing top 20 rows
 Let's load some data from the Oracle table Departments:
 <pre lang="scala">
 scala> val departments = sqlContext.load("jdbc", Map("url" -> "jdbc:oracle:thin:hr/hr@localhost:1521/orcl", "dbtable" -> "departments"))
-
-<console>:67: warning: method load in class SQLContext is deprecated: Use read.format(source).options(options).load(). This will be removed in Spark 2.0.
-         val departments = sqlContext.load("jdbc", Map("url" -> "jdbc:oracle:thin:hr/hr@localhost:1521/orcl", "dbtable" -> "departments"))                                      ^
 </pre>
 REPL responds:
 <pre lang="scala">
@@ -596,27 +592,66 @@ only showing top 20 rows
 
 <h2>Cassandra Data Modelling</h2>
 Some basics:
-- Cassandra is a NoSQL distributed database so we cannot use the table joins that are in the relational Oracle HR database schema. 
-- We need to de-normalise the HR schema, removing foreign keys and look-up tables - these are relational concepts that don't exist in the distributed world.
+<ul>
+  <li>
+    Cassandra is a NoSQL distributed database so we cannot use the table joins that are in the relational Oracle HR database schema.
+  </li>
+  <li>
+    We need to de-normalise the HR schema, removing foreign keys and look-up tables - these are relational concepts that don't exist in the distributed world.
+  </li>
+</ul>
 
-For this exercise I will focus on the EMPLOYEES, JOBS and DEPARTMENTS tables.
+Cassandra is a NoSQL distributed database so we cannot use the table joins that are in the relational Oracle HR database schema. 
+<ul>
+  <li>
+    We need to de-normalise the HR schema, removing foreign keys and look-up tables - these are relational concepts that don't exist in the distributed world.
+  </li>
+</ul>
 
-- Cassandra data modelling is a query-driven process - you first decide the queries that you wish to run, then build your data model around those queries. 
-- This is how Cassandra can ensure that your queries with scale with the cluster (this is usually the opposite of the relational world where you start with your data, decide what queries you want to run against it, then index it to the eyeballs to support those queries).
+For this demonstration I will focus on the EMPLOYEES and DEPARTMENTS tables.
+
+<ul>
+  <li>
+    Cassandra data modelling is a query-driven process - you first decide the queries that you wish to run, then build your data model around those queries. 
+  </li>
+  <li>
+    This is how Cassandra can ensure that your queries with scale with the cluster (this is usually the opposite of the relational world where you start with your data, decide what queries you want to run against it, then index it to the eyeballs to support those queries).
+  </li>
+</ul>
 
 Remember that in a relational database maintaining those indexes is very expensive operation that becomes more expensive as the volume of data grows.
 
-- In the Cassandra world we start with the queries and then design the data model to support those queries. 
-- We want to pull the source data from Oracle and move it to the tables in Cassandra. 
-- We will perform data transformations on the in-flight data in Spark and SparkSQL to achieve this.
+<ul>
+  <li>
+    In the Cassandra world we start with the queries and then design the data model to support those queries. 
+  </li>
+  <li>
+    We want to pull the source data from Oracle and move it to the tables in Cassandra. 
+  </li>
+  <li>
+    We will perform data transformations on the in-flight data in Spark and SparkSQL to achieve this.
+  </li>
+</ul>
 
 Our queries are:
-- Query all employees on EMPLOYEE_ID
-- Query all departments, optionally returning employees by department
+<ul>
+  <li>
+    Query all employees on EMPLOYEE_ID
+  </li>
+  <li>
+    Query all departments, optionally returning employees by department
+  </li>
+</ul>
 
 In Cassandra we will create the following tables:
-- A table for employees, similar to HR.EMPLOYEES but without the foreign keys to JOB_ID, MANAGER_ID and DEPARTMENT_ID. 
-- We will replace the HR.DEPARTMENTS lookup table - we will use EMPLOYEES_BY_DEPARTMENT with a PK on DEPARTMENT_ID, clustered on EMPLOYEE_ID
+<ul>
+  <li>
+    A table for employees, similar to HR.EMPLOYEES but without the foreign keys to JOB_ID, MANAGER_ID and DEPARTMENT_ID. 
+  </li>
+  <li>
+    We will replace the HR.DEPARTMENTS lookup table - we will use EMPLOYEES_BY_DEPARTMENT with a PK on DEPARTMENT_ID, clustered on EMPLOYEE_ID
+  </li>
+</ul>
 
 <h3>Create HR KeySpace In Cassandra</h3>
 The first thing that we need to do in Cassandra is create a keyspace to contain the tables that we will create. I'm using a replication factor of 1 because I have one node in my development cluster. For most production deployments we recommend a multi-datacenter Active-Active HA setup across geographical regions using NetworkTopologyStrategy with RF=3.:
