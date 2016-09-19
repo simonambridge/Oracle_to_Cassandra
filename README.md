@@ -517,7 +517,13 @@ departments: org.apache.spark.sql.DataFrame = [DEPARTMENT_ID: decimal(4,0), DEPA
 
 There are some options available that allow you to tune how Spark uses the JDBC driver. The JDBC datasource supports partitionning so that you can specify how Spark will parallelize the load operation from the JDBC source. By default a JDBC load will be sequential which is much less efficient where multiple workers are available.
 
-The options are partitionColumn, lowerBound, upperBound and numPartitions.	They describe how to partition the table when reading in parallel from multiple workers.
+The options describe how to partition the table when reading in parallel from multiple workers:
+<ul>
+<li>partitionColumn</li>
+<li>lowerBound</li>
+<li>upperBound</li>
+<li>numPartitions.	</li>
+</ul>
 
 These options must all be specified if any of them is specified. 
 <ul>
