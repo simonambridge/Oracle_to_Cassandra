@@ -447,13 +447,15 @@ import java.io._
 <br>
 <h2>Read Oracle Data Into A Spark DataFrame</h2>
 
-And try the data load from Oracle - all good and no errors:
+Next, load the data from the Oracle table using JDBC.<p>
+For Spark versions below 1.4:
 <pre lang="scala">
 scala> val employees = sqlContext.load("jdbc", Map("url" -> "jdbc:oracle:thin:hr/hr@localhost:1521/orcl", "dbtable" -> "employees"))
-
-warning: method load in class SQLContext is deprecated: Use read.format(source).options(options).load(). This will be removed in Spark 2.0.
 </pre>
-Don't worry about the warning - I turned on the deprecation flag on command line when I started the REPL.
+For Spark 1.4 onwards:
+<pre lang="scala">
+scala> val employees = sqlContext.read.format("jdbc").option("url", "jdbc:oracle:thin:hr/hr@localhost:1521/orcl").option("driver", "oracle.jdbc.OracleDriver").option("dbtable", "employees").load()
+</pre>
 
 The Spark REPL responds with:
 <pre>
@@ -462,7 +464,9 @@ employees: org.apache.spark.sql.DataFrame = [EMPLOYEE_ID: decimal(6,0), FIRST_NA
 All good so far.
 
 <h2>Examining The DataFrame</h2>
-We can use the nifty printSchema DataFrame method to show us the schema in the DataFrame that we created.
+Now that we've created a dataframe using the jdbc method shown above, we can use the dataframe method printSchema() to look at the dataframe schema. 
+You'll notice that it looks a lot like a table. That's great because it means that we can use it to manipulate large volumes of tabular data:
+
 <pre lang="scala">
 scala> employees.printSchema()
 root
@@ -478,9 +482,11 @@ root
  |-- MANAGER_ID: decimal(6,0) (nullable = true)
  |-- DEPARTMENT_ID: decimal(4,0) (nullable = true)
 </pre>
-We can read the data from the DataFrame using the show() method:
+
+We can use the dataframe .show() method to display the first x:int rows in the table:
+
 <pre lang="scala">
-scala> employees.show()
+scala> employees.show(5)
 +-----------+-----------+----------+--------+------------+--------------------+----------+--------+--------------+----------+-------------+
 |EMPLOYEE_ID| FIRST_NAME| LAST_NAME|   EMAIL|PHONE_NUMBER|           HIRE_DATE|    JOB_ID|  SALARY|COMMISSION_PCT|MANAGER_ID|DEPARTMENT_ID|
 +-----------+-----------+----------+--------+------------+--------------------+----------+--------+--------------+----------+-------------+
@@ -489,29 +495,21 @@ scala> employees.show()
 |        102|        Lex|   De Haan| LDEHAAN|515.123.4569|2001-01-13 00:00:...|     AD_VP|17000.00|          null|       100|           90|
 |        103|  Alexander|    Hunold| AHUNOLD|590.423.4567|2006-01-03 00:00:...|   IT_PROG| 9000.00|          null|       102|           60|
 |        104|      Bruce|     Ernst|  BERNST|590.423.4568|2007-05-20 23:00:...|   IT_PROG| 6000.00|          null|       103|           60|
-|        105|      David|    Austin| DAUSTIN|590.423.4569|2005-06-24 23:00:...|   IT_PROG| 4800.00|          null|       103|           60|
-|        106|      Valli| Pataballa|VPATABAL|590.423.4560|2006-02-05 00:00:...|   IT_PROG| 4800.00|          null|       103|           60|
-|        107|      Diana|   Lorentz|DLORENTZ|590.423.5567|2007-02-07 00:00:...|   IT_PROG| 4200.00|          null|       103|           60|
-|        108|      Nancy| Greenberg|NGREENBE|515.124.4569|2002-08-16 23:00:...|    FI_MGR|12008.00|          null|       101|          100|
-|        109|     Daniel|    Faviet| DFAVIET|515.124.4169|2002-08-15 23:00:...|FI_ACCOUNT| 9000.00|          null|       108|          100|
-|        110|       John|      Chen|   JCHEN|515.124.4269|2005-09-27 23:00:...|FI_ACCOUNT| 8200.00|          null|       108|          100|
-|        111|     Ismael|   Sciarra|ISCIARRA|515.124.4369|2005-09-29 23:00:...|FI_ACCOUNT| 7700.00|          null|       108|          100|
-|        112|Jose Manuel|     Urman| JMURMAN|515.124.4469|2006-03-07 00:00:...|FI_ACCOUNT| 7800.00|          null|       108|          100|
-|        113|       Luis|      Popp|   LPOPP|515.124.4567|2007-12-07 00:00:...|FI_ACCOUNT| 6900.00|          null|       108|          100|
-|        114|        Den|  Raphaely|DRAPHEAL|515.127.4561|2002-12-07 00:00:...|    PU_MAN|11000.00|          null|       100|           30|
-|        115|  Alexander|      Khoo|   AKHOO|515.127.4562|2003-05-17 23:00:...|  PU_CLERK| 3100.00|          null|       114|           30|
-|        116|     Shelli|     Baida|  SBAIDA|515.127.4563|2005-12-24 00:00:...|  PU_CLERK| 2900.00|          null|       114|           30|
-|        117|      Sigal|    Tobias| STOBIAS|515.127.4564|2005-07-23 23:00:...|  PU_CLERK| 2800.00|          null|       114|           30|
-|        118|        Guy|    Himuro| GHIMURO|515.127.4565|2006-11-15 00:00:...|  PU_CLERK| 2600.00|          null|       114|           30|
-|        119|      Karen|Colmenares|KCOLMENA|515.127.4566|2007-08-09 23:00:...|  PU_CLERK| 2500.00|          null|       114|           30|
 +-----------+-----------+----------+--------+------------+--------------------+----------+--------+--------------+----------+-------------+
-only showing top 20 rows
+only showing top 5 rows
 </pre>
 
 Let's load some data from the Oracle table Departments:
+For Spark versions below 1.4:
 <pre lang="scala">
 scala> val departments = sqlContext.load("jdbc", Map("url" -> "jdbc:oracle:thin:hr/hr@localhost:1521/orcl", "dbtable" -> "departments"))
 </pre>
+</pre>
+For Spark 1.4 onwards:
+<pre lang="scala">
+scala> val departments = sqlContext.read.format("jdbc").option("url", "jdbc:oracle:thin:hr/hr@localhost:1521/orcl").option("driver", "oracle.jdbc.OracleDriver").option("dbtable", "departments").load()
+</pre>
+
 REPL responds:
 <pre lang="scala">
 departments: org.apache.spark.sql.DataFrame = [DEPARTMENT_ID: decimal(4,0), DEPARTMENT_NAME: string, MANAGER_ID: decimal(6,0), LOCATION_ID: decimal(4,0)]
