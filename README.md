@@ -514,6 +514,35 @@ REPL responds:
 <pre lang="scala">
 departments: org.apache.spark.sql.DataFrame = [DEPARTMENT_ID: decimal(4,0), DEPARTMENT_NAME: string, MANAGER_ID: decimal(6,0), LOCATION_ID: decimal(4,0)]
 </pre>
+
+There are some options available that allow you to tune how Spark uses the JDBC driver. The JDBC datasource supports partitionning so that you can specify how Spark will parallelize the load operation from the JDBC source. By default a JDBC load will be sequential which is much less efficient where multiple workers are available.
+
+The options are partitionColumn, lowerBound, upperBound and numPartitions.	They describe how to partition the table when reading in parallel from multiple workers.
+
+These options must all be specified if any of them is specified. 
+<ul>
+<li>partitionColumn must be a numeric column from the table in question used to partition the table.</li>
+
+<li>Notice that lowerBound and upperBound are just used to decide the partition stride, not for filtering the rows in table. So all rows in the table will be partitioned and returned.</li>
+<li>fetchSize	is the JDBC fetch size, which determines how many rows to fetch per round trip. This can help performance on JDBC drivers which default to low fetch size (eg. Oracle with 10 rows).</li>
+</ul>
+<br>
+So this might be an alternative load command for the departments table using some of those options:
+
+<pre lang="scala">
+scala> val departments = sqlContext.read.format("jdbc")
+                  .option("url", "jdbc:oracle:thin:hr/hr@localhost:1521/orcl")
+                  .option("driver", "oracle.jdbc.OracleDriver")
+                  .option("dbtable", "departments")
+                  .option("partitionColumn", "DEPARTMENT_ID")
+                  .option("lowerBound", "1")
+                  .option("upperBound", "100000000")
+                  .option("numPartitions", "4")
+                  .load()
+</pre>
+
+> Don’t create too many partitions in parallel on a large cluster, otherwise Spark might crash the external database.
+
 View the Departments schema:
 <pre lang="scala">
 scala> departments.printSchema()
