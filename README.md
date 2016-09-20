@@ -1,6 +1,8 @@
 # Migrating Relational Data From Oracle To DSE/Cassandra - using Spark DataFrames, SparkSQL and the spark-cassandra connector
 The objective of this exercise is to demonstrate how to migrate data from Oracle to DataStax Cassandra. I'll be using the DataFrame capability introduced in Apache Spark 1.3 to load data from tables in an Oracle database (12c) via Oracle's JDBC thin driver, to generate a result set, joining tables where necessary.
 The data will then be saved to DSE/Cassandra.
+
+This demo is not intended as an exhaustive or comprehensive tutorial but it should provide enough material to gain an understanding of the processes involved in migrating data from Oracle to Cassandra
  
 <h2>Pre-requisites</h2>
 <h3> DataStax Enterprise</h3>
