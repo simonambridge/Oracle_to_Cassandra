@@ -560,7 +560,10 @@ root
  |-- MANAGER_ID: decimal(6,0) (nullable = true)
  |-- LOCATION_ID: decimal(4,0) (nullable = true)
 </pre>
-Read records from the Departments DataFrame:
+
+At this point the JDBC statement has been validated but Spark hasn't yet checked the physical data (e.g. if you provide an invalid partitioning column you won't get an error message until you try to read the data).
+
+Now read records from the Departments DataFrame:
 
 <pre lang="scala">
 scala> departments.show()
