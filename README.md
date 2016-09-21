@@ -551,6 +551,8 @@ scala> val departments = sqlContext.read.format("jdbc")
 
 > Don’t create too many partitions in parallel on a large cluster, otherwise Spark might crash the external database.
 
+You can read more about this here: http://spark.apache.org/docs/latest/sql-programming-guide.html#jdbc-to-other-databases
+
 View the Departments schema:
 <pre lang="scala">
 scala> departments.printSchema()
