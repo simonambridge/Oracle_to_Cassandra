@@ -629,7 +629,7 @@ Remember that in a relational database maintaining those indexes is very expensi
     We want to pull the source data from Oracle and move it to the tables in Cassandra. 
   </li>
   <li>
-    We will perform data transformations on the in-flight data in Spark and SparkSQL to achieve this.
+    We will perform data transformations on the in-flight data in Spark using dataframes and SparkSQL to achieve this.
   </li>
 </ul>
 
@@ -646,7 +646,7 @@ Our queries are:
 In Cassandra we will create the following tables:
 <ul>
   <li>
-    A table for employees, similar to HR.EMPLOYEES but without the foreign keys to JOB_ID, MANAGER_ID and DEPARTMENT_ID. 
+    A table for employees, similar to HR.EMPLOYEES but dropping the columns containing the foreign keys JOB_ID, MANAGER_ID and DEPARTMENT_ID.These relationships will be satisfied using tables designed around the queries. 
   </li>
   <li>
     We will replace the HR.DEPARTMENTS lookup table - we will use EMPLOYEES_BY_DEPARTMENT with a PK on DEPARTMENT_ID, clustered on EMPLOYEE_ID
