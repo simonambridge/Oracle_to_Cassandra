@@ -600,9 +600,6 @@ Some basics:
   <li>
     We need to de-normalise the HR schema, removing foreign keys and look-up tables - these are relational concepts that don't exist in the distributed world.
   </li>
-  <li>
-    We need to de-normalise the HR schema, removing foreign keys and look-up tables - these are relational concepts that don't exist in the distributed world.
-  </li>
 </ul>
 
 For this demonstration I will focus on the EMPLOYEES and DEPARTMENTS tables.
