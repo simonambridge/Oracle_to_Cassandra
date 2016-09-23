@@ -909,7 +909,8 @@ scala> employees.registerTempTable("empTable")
 scala> departments.registerTempTable("deptTable")
 </pre>
 
-Right, let's do the query joining the tables, using SparkSQL:
+Right, let's do the query joining the tables (this is so easy using SparkSQL :) ):
+
 <pre lang="scala">
 scala> val emp_by_dept = sqlContext.sql("SELECT d.department_id, d.department_name, e.employee_id, e.first_name, e.last_name FROM empTable e, deptTable d where e.department_id=d.department_id")
 </pre>
