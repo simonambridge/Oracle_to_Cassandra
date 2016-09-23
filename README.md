@@ -691,7 +691,7 @@ cqlsh:hr> select * from employees where employee_id=188;
          188 |           null | KCHUNG |      Kelly | 2005-06-14 00:00:00-0400 |     Chung | 650.505.1876 | 3800.00
 </pre>
 
-<h3>Change Dataframe Colun Names To Lower Case</h3>
+<h3>Change Dataframe Column Names To Lower Case</h3>
 At this point go back to the Spark shell/REPL for the following steps.
 
 If you try to save your employee dataframe to Cassandra right now (using the Spark-Cassandra connector) it will fail with an error message saying that columns don't exist e.g. "EMPLOYEE_ID", "FIRST_NAME" - even though they're there. This is because the connector expects the column case in the dataframe to match the column case in the Cassandra table. In Cassandra column names are always in lower case, so the dataframe names must match.<p>
@@ -727,7 +727,7 @@ scala> val emps_lc = employees.toDF(newNames: _*)
 emps_lc: org.apache.spark.sql.DataFrame = [employee_id: decimal(6,0), first_name: string, last_name: string, email: string, phone_number: string, hire_date: timestamp, job_Id: string, salary: decimal(8,2), commission_pct: decimal(2,2), manager_id: decimal(6,0), department_id: decimal(4,0)]
 </pre>
 
-The schema in our new dataframe is in lower case - Yay!
+The schema in our <b>new</b> dataframe is in lower case - Yay!
 <pre lang="scala">
 scala> emps_lc.printSchema()
 root
@@ -748,7 +748,8 @@ root
 There are some columns in the dataframe that we don't need for this step. We simply create a new dataframe containing just the columns that we do want to use.
 
 <h3>Create SparkSQL Tables From The DataFrames</h3>
-We can manipulate the data in Spark in two ways. We can use the dataframe methods which allow for querying and filtering of data. Or we can use SparkSQL. To access data using SparkSQL we need to register a dataframe as a temporary table against which we can run relational SQL queries. 
+We can manipulate the data in Spark in two ways. We can use the dataframe methods which allow for querying and filtering of data. Or we can use SparkSQL. To access data using SparkSQL we need to register a dataframe as a temporary table against which we can run relational SQL queries.
+
 As an example, let's join the employees and departments tables:
 <pre lang="scala">
 scala> employees.registerTempTable("empTable")
@@ -757,13 +758,13 @@ scala> departments.registerTempTable("deptTable")
 </pre>
 
 <br>
-We'll select the columns that we want for the Cassandra table into a new dataframe called "emps_lc_subset":
-
+<h3>Use SparkSQL To Create A DataFrame That Matches Our Target Table in Cassandra</h3>
+We'll select the columns that we want into a new dataframe called "emps_lc_subset":
+We can do it like this using SparkSQL to join records in the temprary tables that we registered above:
 <pre lang="scala">
 scala> val emps_lc_subset = sqlContext.sql("SELECT employee_id, first_name, last_name, email, phone_number, hire_date, salary, commission_pct FROM empTable")
 
 emps_lc_subset: org.apache.spark.sql.DataFrame = [employee_id: decimal(6,0), first_name: string, last_name: string, email: string, phone_number: string, hire_date: timestamp, salary: decimal(8,2), commission_pct: decimal(2,2)]
-
 </pre>
 
 And we now have the schema we're looking for to match the Cassandra target table.
@@ -781,14 +782,49 @@ root
  |-- commission_pct: decimal(2,2) (nullable = true)
 </pre>
 
+<h3>Use DataFrame Methods To Create A DataFrame That Matches Our Target Table in Cassandra</h3>
+Alternatively we could have created the same emps_lc_subset dataframe using dataframe select methods:
+<pre lang="scala">
+scala> val emps_lc_subset = employees.select("employee_id","first_name","last_name","email","phone_number","hire_date","salary","commission_pct")
+
+emps_lc_subset: org.apache.spark.sql.DataFrame = [employee_id: decimal(6,0), first_name: string, last_name: string, email: string, phone_number: string, hire_date: timestamp, salary: decimal(8,2), commission_pct: decimal(2,2)]
+</pre>
+
+And to prove the results are the same:
+<pre lang="scala">
+scala> emps_lc_subset.printSchema()
+root
+ |-- employee_id: decimal(6,0) (nullable = false)
+ |-- first_name: string (nullable = true)
+ |-- last_name: string (nullable = false)
+ |-- email: string (nullable = false)
+ |-- phone_number: string (nullable = true)
+ |-- hire_date: timestamp (nullable = false)
+ |-- salary: decimal(8,2) (nullable = true)
+ |-- commission_pct: decimal(2,2) (nullable = true)
+
+scala> emps_lc_subset.show(5)
++-----------+----------+---------+--------+------------+--------------------+--------+--------------+
+|employee_id|first_name|last_name|   email|phone_number|           hire_date|  salary|commission_pct|
++-----------+----------+---------+--------+------------+--------------------+--------+--------------+
+|        100|    Steven|     King|   SKING|515.123.4567|2003-06-16 23:00:...|24000.00|          null|
+|        101|     Neena|  Kochhar|NKOCHHAR|515.123.4568|2005-09-20 23:00:...|17000.00|          null|
+|        102|       Lex|  De Haan| LDEHAAN|515.123.4569|2001-01-13 00:00:...|17000.00|          null|
+|        103| Alexander|   Hunold| AHUNOLD|590.423.4567|2006-01-03 00:00:...| 9000.00|          null|
+|        104|     Bruce|    Ernst|  BERNST|590.423.4568|2007-05-20 23:00:...| 6000.00|          null|
++-----------+----------+---------+--------+------------+--------------------+--------+--------------+
+only showing top 5 rows
+</pre>
+
 <h3>Write The Employees Dataframe To Cassandra</h3>
-Now we can save the data to a Cassandra table using the Spark-Cassandra connector (truncate the table if it isn't empty):
+We now have our data nicely defined in a Spark dataframe ready to be written to Cassandra. The next step is to save the data to a Cassandra table using the Spark-Cassandra connector (Note: you must truncate the table first if it isn't empty):
+
 <pre lang="scala">
 scala> emps_lc_subset.write.format("org.apache.spark.sql.cassandra").options(Map( "table" -> "employees", "keyspace" -> "hr")).save()
 </pre>
 
 And if we hop over to cqlsh we can see the records are there:
-<pre>
+<pre lang="sql">
 cqlsh:hr> select * from employees;
 
  employee_id | commission_pct | email    | first_name  | hire_date                | last_name   | phone_number       | salary
@@ -808,6 +844,34 @@ cqlsh:hr> select * from employees;
          181 |           null |  JFLEAUR |        Jean | 2006-02-23 00:00:00-0500 |      Fleaur |       650.507.9877 |  3100.00
 </pre>
 
+> The integrated DSE release of Cassandra and Spark Spark also gives us the opportunity to directly read tables in Cassandra.
+
+For example, read some columns from the employees table:
+<pre lang="scala">
+scala> val emp_data = sqlContext.sql ("select employee_id, first_name, last_name from hr.employees")
+emp_data: org.apache.spark.sql.DataFrame = [employee_id: bigint]
+
+scala> emp_data.printSchema()
+root
+ |-- employee_id: long (nullable = true)
+ |-- first_name: string (nullable = true)
+ |-- last_name: string (nullable = true)
+
+scala> emp_data.count()
+res20: Long = 107
+
+scala> emp_data.show(5)
++-----------+----------+---------+
+|employee_id|first_name|last_name|
++-----------+----------+---------+
+|        111|    Ismael|  Sciarra|
+|        163|  Danielle|   Greene|
+|        148|    Gerald|Cambrault|
+|        197|     Kevin|   Feeney|
+|        102|       Lex|  De Haan|
++-----------+----------+---------+
+only showing top 5 rows
+</pre>
 
 <h2>Query 2: Query All Departments And Employees by Department</h2>
 
@@ -830,18 +894,22 @@ CREATE TABLE employees_by_dept (
 </pre>
 
 
-> For each department we store the department id and the name of the department (as a partioning key and a static column for that partitioning key), and then for each department partition key there will be successive clustered columns of employees in that department.
+> For each department we'll store the department id and the name of the department (as a partioning key and a static column for that partitioning key), and then for each department partition key there will be successive clustered columns of employees in that department.
 
-We select employees-by-department by joining our SparkSQL tables on DEPARTMENT_ID.
+We create a dataframe containing employees-by-department by joining our SparkSQL tables employees and departments on DEPARTMENT_ID.
 
 In the Spark REPL:
 As an example, let's join the employees and departments tables.
-If you haven't already registered the Spark SQL tables do it like this:
+
+<b>Note:</b> If you haven't already registered the Spark SQL tables do it like this:
+
 <pre lang="scala">
 scala> employees.registerTempTable("empTable")
 
 scala> departments.registerTempTable("deptTable")
 </pre>
+
+Right, let's do the query joining the tables, using SparkSQL:
 <pre lang="scala">
 scala> val emp_by_dept = sqlContext.sql("SELECT d.department_id, d.department_name, e.employee_id, e.first_name, e.last_name FROM empTable e, deptTable d where e.department_id=d.department_id")
 </pre>
