@@ -589,7 +589,8 @@ scala> departments.count()
 res1: Long = 27           
 </pre>
 <br>
-
+Now that we've seen how to access data in Oracle using Spark DataFrames, let's park that for a moment and head back over to Cassandra to consider how we want to store that data in the Cassandra database.
+<br>
 <h2>Cassandra Data Modelling</h2>
 Some basics:
 <ul>
