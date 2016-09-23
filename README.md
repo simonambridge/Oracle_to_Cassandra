@@ -844,7 +844,7 @@ cqlsh:hr> select * from employees;
          181 |           null |  JFLEAUR |        Jean | 2006-02-23 00:00:00-0500 |      Fleaur |       650.507.9877 |  3100.00
 </pre>
 
-> The integrated DSE release of Cassandra and Spark Spark also gives us the opportunity to directly read tables in Cassandra.
+<b>Note:</b>The integrated DSE release of Cassandra and Spark Spark also gives us the opportunity to directly read tables in Cassandra.
 
 For example, read some columns from the employees table:
 <pre lang="scala">
@@ -878,7 +878,7 @@ only showing top 5 rows
 <H3>Multi-Table Joins In SparkSQL</h3>
 when we migrate data from a relational database to a NoSQL database like Apache Cassandra there is invariably a need to perform some element of data transformation. Transformation typically involves duplication and de-normalisation of data and to do this we frequently want to join data between tables. Let's see how we can do that in Spark.
 
-<H3>Create Cassandra Table EXISTS EMPLOYEES_BY_DEPT</h3>
+<H3>Create Cassandra Table EMPLOYEES_BY_DEPT</h3>
 To satisfy Query 2 we have a table for Employees stored by Department.
 DEPARTMENT_ID is the partitioning key, EMPLOYEE_ID is the clustering column. Wel will need to join the Employees and Departments tables to satisfy this query.
 
