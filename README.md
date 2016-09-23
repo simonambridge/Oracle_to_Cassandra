@@ -437,6 +437,7 @@ Spark context available as sc.
 Hive context available as sqlContext. Will be initialized on first use.
 </pre>
 <br>
+
 <h2>Import Some Classes</h2>
 We import some classes:
 <pre lang="scala">
@@ -546,11 +547,13 @@ scala> val departments = sqlContext.read.format("jdbc")
                   .option("lowerBound", "1")
                   .option("upperBound", "100000000")
                   .option("numPartitions", "4")
+                  .option("fetchsize","1000")
                   .load()
 </pre>
 
 > Don’t create too many partitions in parallel on a large cluster, otherwise Spark might crash the external database.
 
+You should experiment with these options when you load your data on your infrastructure.
 You can read more about this here: http://spark.apache.org/docs/latest/sql-programming-guide.html#jdbc-to-other-databases
 
 View the Departments schema:
@@ -568,7 +571,7 @@ At this point the JDBC statement has been validated but Spark hasn't yet checked
 Now read records from the Departments DataFrame:
 
 <pre lang="scala">
-scala> departments.show()
+scala> departments.show(5)
 +-------------+--------------------+----------+-----------+
 |DEPARTMENT_ID|     DEPARTMENT_NAME|MANAGER_ID|LOCATION_ID|
 +-------------+--------------------+----------+-----------+
@@ -577,71 +580,13 @@ scala> departments.show()
 |           30|          Purchasing|       114|       1700|
 |           40|     Human Resources|       203|       2400|
 |           50|            Shipping|       121|       1500|
-|           60|                  IT|       103|       1400|
-|           70|    Public Relations|       204|       2700|
-|           80|               Sales|       145|       2500|
-|           90|           Executive|       100|       1700|
-|          100|             Finance|       108|       1700|
-|          110|          Accounting|       205|       1700|
-|          120|            Treasury|      null|       1700|
-|          130|       Corporate Tax|      null|       1700|
-|          140|  Control And Credit|      null|       1700|
-|          150|Shareholder Services|      null|       1700|
-|          160|            Benefits|      null|       1700|
-|          170|       Manufacturing|      null|       1700|
-|          180|        Construction|      null|       1700|
-|          190|         Contracting|      null|       1700|
-|          200|          Operations|      null|       1700|
 +-------------+--------------------+----------+-----------+
-only showing top 20 rows
+only showing top 5 rows
 </pre>
-
-
-<H2>Multi-Table Joins In SparkSQL</h2>
-We may well need to perform some element of data transformation when we migrate data from a relational database to a NoSQL database like Apache Cassandra. Transformation typically involves duplication and de-normalisation of data and to do this we frequently want to join data between tables. Let's see how we can do that in Spark.
-
-<h3>Create SparkSQL Tables From The DataFrames</h3>
+What's the total number of records in the departments dataframe:
 <pre lang="scala">
-scala> employees.registerTempTable("empTable")
-
-scala> departments.registerTempTable("deptTable")
-</pre>
-Now query empTable and deptTable joining on DEPARTMENT_ID:
-<pre lang="scala">
-scala> val depts_by_emp = sqlContext.sql("SELECT employee_id, department_name FROM empTable e, deptTable d where e.department_id=d.department_id")
-</pre>
-Response:
-<pre lang="scala">
-depts_by_emp: org.apache.spark.sql.DataFrame = [employee_id: decimal(6,0), department_name: string]
-</pre>
-We can look at the results of the query:
-<pre>
-scala> depts_by_emp.show()
-+-----------+---------------+                                                   
-|employee_id|department_name|
-+-----------+---------------+
-|        203|Human Resources|
-|        120|       Shipping|
-|        121|       Shipping|
-|        122|       Shipping|
-|        123|       Shipping|
-|        124|       Shipping|
-|        125|       Shipping|
-|        126|       Shipping|
-|        127|       Shipping|
-|        128|       Shipping|
-|        129|       Shipping|
-|        130|       Shipping|
-|        131|       Shipping|
-|        132|       Shipping|
-|        133|       Shipping|
-|        134|       Shipping|
-|        135|       Shipping|
-|        136|       Shipping|
-|        137|       Shipping|
-|        138|       Shipping|
-+-----------+---------------+
-only showing top 20 rows
+scala> departments.count()
+res1: Long = 27           
 </pre>
 <br>
 
@@ -708,7 +653,7 @@ In Cassandra we will create the following tables:
   </li>
 </ul>
 
-<h3>Create HR KeySpace In Cassandra</h3>
+<h2>Create HR KeySpace In Cassandra</h2>
 The first thing that we need to do in Cassandra is create a keyspace to contain the tables that we will create. I'm using a replication factor of 1 because I have one node in my development cluster. For most production deployments we recommend a multi-datacenter Active-Active HA setup across geographical regions using NetworkTopologyStrategy with RF=3:
 
 Log into cqlsh 
@@ -720,14 +665,14 @@ CREATE KEYSPACE IF NOT EXISTS HR WITH REPLICATION = {'class': 'SimpleStrategy', 
 USE HR;
 </pre>
 
-<h3>Create Employees Table</h3>
+<h2>Create Employees Table</h2>
 
 De-normalising and potentially duplicating data in Cassandra is not a bad thing. It's quicker than updating indexes, and disk is cheap, and Cassandra writes are fast!
 
-So for Query 1 we'll also move the Department, Manager and Job data out of the EMPLOYEES table and use the EMPLOYEES table purely for employee personal data. 
+So for Query 1 we'll also move the Department, Manager and Job data out of the EMPLOYEES table and use the EMPLOYEES table purely for employee personal data. We get the information that we've moved by creating tables specifically to support those queries. See Query 2 as an example of getting data about departments and employees.
 For Query 2 we'll use EMPLOYEES_BY_DEPARTMENT to query Departments and Employees by Department.
 
-<h3>Query 1: Query All Employees on EMPLOYEE_ID</h3>
+<h2>Query 1: Query All Employees on EMPLOYEE_ID</h2>
 Create the table we use to hold employees in Cassandra:
 <pre lang="sql">
 DROP TABLE IF EXISTS employees;
@@ -752,10 +697,10 @@ cqlsh:hr> select * from employees where employee_id=188;
          188 |           null | KCHUNG |      Kelly | 2005-06-14 00:00:00-0400 |     Chung | 650.505.1876 | 3800.00
 </pre>
 
-<h2>Prepare The Data And Save It To DSE/Cassandra</h2>
-At this point go back to the Spark shell/REPL for the following steps:
+<h3>Change Dataframe Colun Names To Lower Case</h3>
+At this point go back to the Spark shell/REPL for the following steps.
 
-If you try to save your dataframe to Cassandra now (using the Spark-Cassandra connector) it will fail with an error message saying that columns don't exist e.g. "EMPLOYEE_ID", "FIRST_NAME" - even though they're there. This is because the connector expects the column case in the dataframe to match the column case in the Cassandra table. In Cassandra column names are always in lower case, so the dataframe names must match.<p>
+If you try to save your employee dataframe to Cassandra right now (using the Spark-Cassandra connector) it will fail with an error message saying that columns don't exist e.g. "EMPLOYEE_ID", "FIRST_NAME" - even though they're there. This is because the connector expects the column case in the dataframe to match the column case in the Cassandra table. In Cassandra column names are always in lower case, so the dataframe names must match.<p>
 So we need to modify our dataframe schema....
 Here's a reminder of our raw employees dataframe schema again:
 
@@ -774,6 +719,7 @@ root
  |-- MANAGER_ID: decimal(6,0) (nullable = true)
  |-- DEPARTMENT_ID: decimal(4,0) (nullable = true)
 </pre>
+
 We want to change those column names to lower case - so we create a list of column names in lower case matching the dataframe order, creating a new dataframe "emps_lc" in the process.
 We rename the columns in the dataframe like this:
 
@@ -807,7 +753,17 @@ root
 
 There are some columns in the dataframe that we don't need for this step. We simply create a new dataframe containing just the columns that we do want to use.
 
-We should still have the SparkSQL table empTable that we defined earlier based on the employees dataframe. We'll select the columns that we want for the Cassandra table into a new dataframe called "emps_lc_subset":
+<h3>Create SparkSQL Tables From The DataFrames</h3>
+We can manipulate the data in Spark in two ways. We can use the dataframe methods which allow for querying and filtering of data. Or we can use SparkSQL. To access data using SparkSQL we need to register a dataframe as a temporary table against which we can run relational SQL queries. 
+As an example, let's join the employees and departments tables:
+<pre lang="scala">
+scala> employees.registerTempTable("empTable")
+
+scala> departments.registerTempTable("deptTable")
+</pre>
+
+<br>
+We'll select the columns that we want for the Cassandra table into a new dataframe called "emps_lc_subset":
 
 <pre lang="scala">
 scala> val emps_lc_subset = sqlContext.sql("SELECT employee_id, first_name, last_name, email, phone_number, hire_date, salary, commission_pct FROM empTable")
@@ -830,8 +786,9 @@ root
  |-- salary: decimal(8,2) (nullable = true)
  |-- commission_pct: decimal(2,2) (nullable = true)
 </pre>
-<h3>Write the Employees dataframe to Cassandra</h3>
-Now we can save the data to a Cassandra table using the Spark-Cassandra connector:
+
+<h3>Write The Employees Dataframe To Cassandra</h3>
+Now we can save the data to a Cassandra table using the Spark-Cassandra connector (truncate the table if it isn't empty):
 <pre lang="scala">
 scala> emps_lc_subset.write.format("org.apache.spark.sql.cassandra").options(Map( "table" -> "employees", "keyspace" -> "hr")).save()
 </pre>
@@ -858,12 +815,16 @@ cqlsh:hr> select * from employees;
 </pre>
 
 
-<h3>Query 2: Query All Departments And Employees by Department</h3>
+<h2>Query 2: Query All Departments And Employees by Department</h2>
 
+<H3>Multi-Table Joins In SparkSQL</h3>
+when we migrate data from a relational database to a NoSQL database like Apache Cassandra there is invariably a need to perform some element of data transformation. Transformation typically involves duplication and de-normalisation of data and to do this we frequently want to join data between tables. Let's see how we can do that in Spark.
+
+<H3>Create Cassandra Table EXISTS EMPLOYEES_BY_DEPT</h3>
 To satisfy Query 2 we have a table for Employees stored by Department.
-DEPARTMENT_ID is the partitioning key, EMPLOYEE_ID is the clustering column.
+DEPARTMENT_ID is the partitioning key, EMPLOYEE_ID is the clustering column. Wel will need to join the Employees and Departments tables to satisfy this query.
 
-<pre>
+<pre lang="sql">
 DROP TABLE IF EXISTS EMPLOYEES_BY_DEPT;
 CREATE TABLE employees_by_dept (
  DEPARTMENT_ID            	bigint,
@@ -875,10 +836,18 @@ CREATE TABLE employees_by_dept (
 </pre>
 
 
-For each department we store the department id and the name of the department (as a partioning key and a static column for that partitioning key), and then for each department partition key there will be successive clustered columns of employees in that department.
+> For each department we store the department id and the name of the department (as a partioning key and a static column for that partitioning key), and then for each department partition key there will be successive clustered columns of employees in that department.
 
-Similar to the example used previously, we select employees-by-department by joining our SparkSQL tables, this time on DEPARTMENT_ID:
+We select employees-by-department by joining our SparkSQL tables on DEPARTMENT_ID.
 
+In the Spark REPL:
+As an example, let's join the employees and departments tables.
+If you haven't already registered the Spark SQL tables do it like this:
+<pre lang="scala">
+scala> employees.registerTempTable("empTable")
+
+scala> departments.registerTempTable("deptTable")
+</pre>
 <pre lang="scala">
 scala> val emp_by_dept = sqlContext.sql("SELECT d.department_id, d.department_name, e.employee_id, e.first_name, e.last_name FROM empTable e, deptTable d where e.department_id=d.department_id")
 </pre>
