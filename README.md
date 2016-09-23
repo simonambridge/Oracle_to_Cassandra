@@ -867,9 +867,9 @@ root
  |-- last_name: string (nullable = false)
 </pre>
 
-The data is in the format that we want it for Cassandra:
+The data is in the format that we want it to match the Cassandra target table:
 <pre lang="scala">
-scala> emp_by_dept.show()
+scala> emp_by_dept.show(5)
 +-------------+---------------+-----------+----------+-----------+              
 |department_id|department_name|employee_id|first_name|  last_name|
 +-------------+---------------+-----------+----------+-----------+
@@ -878,23 +878,8 @@ scala> emp_by_dept.show()
 |           50|       Shipping|        121|      Adam|      Fripp|
 |           50|       Shipping|        122|     Payam|   Kaufling|
 |           50|       Shipping|        123|    Shanta|    Vollman|
-|           50|       Shipping|        124|     Kevin|    Mourgos|
-|           50|       Shipping|        125|     Julia|      Nayer|
-|           50|       Shipping|        126|     Irene|Mikkilineni|
-|           50|       Shipping|        127|     James|     Landry|
-|           50|       Shipping|        128|    Steven|     Markle|
-|           50|       Shipping|        129|     Laura|     Bissot|
-|           50|       Shipping|        130|     Mozhe|   Atkinson|
-|           50|       Shipping|        131|     James|     Marlow|
-|           50|       Shipping|        132|        TJ|      Olson|
-|           50|       Shipping|        133|     Jason|     Mallin|
-|           50|       Shipping|        134|   Michael|     Rogers|
-|           50|       Shipping|        135|        Ki|        Gee|
-|           50|       Shipping|        136|     Hazel| Philtanker|
-|           50|       Shipping|        137|    Renske|     Ladwig|
-|           50|       Shipping|        138|   Stephen|     Stiles|
 +-------------+---------------+-----------+----------+-----------+
-only showing top 20 rows
+only showing top 5 rows
 </pre>
 
 <h3>Write the Employees_By_Department dataframe to Cassandra</h3>
