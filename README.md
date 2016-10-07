@@ -663,7 +663,8 @@ USE HR;
 
 De-normalising and potentially duplicating data in Cassandra is not a bad thing. It's quicker than updating indexes, and disk is cheap, and Cassandra writes are fast!
 
-So for Query 1 we'll also move the Department, Manager and Job data out of the EMPLOYEES table and use the EMPLOYEES table purely for employee personal data. We get the information that we've moved by creating tables specifically to support those queries. See Query 2 as an example of getting data about departments and employees.
+So for Query 1 we'll also move the Department, Manager and Job data out of the EMPLOYEES table and use the EMPLOYEES table purely for employee personal data. We get the information that we've moved by creating tables specifically to support those queries. 
+See Query 2 as an example of getting data about departments and employees.
 For Query 2 we'll use EMPLOYEES_BY_DEPARTMENT to query Departments and Employees by Department.
 
 <h2>Query 1: Query All Employees on EMPLOYEE_ID</h2>
@@ -715,6 +716,7 @@ root
 </pre>
 
 We want to change those column names to lower case - so we create a list of column names in lower case matching the dataframe order, creating a new dataframe "emps_lc" in the process.
+
 We rename the columns in the dataframe like this:
 
 <pre lang="scala">
@@ -745,12 +747,13 @@ root
 </pre>
 
 
-There are some columns in the dataframe that we don't need for this step. We simply create a new dataframe containing just the columns that we do want to use.
+There are some columns in the dataframe above that we don't need for this exercise. We will simply create a new dataframe from this one, containing just the columns that we do want to use.
 
 <h3>Create SparkSQL Tables From The DataFrames</h3>
 We can manipulate the data in Spark in two ways. We can use the dataframe methods which allow for querying and filtering of data. Or we can use SparkSQL. To access data using SparkSQL we need to register a dataframe as a temporary table against which we can run relational SQL queries.
 
-As an example, let's join the employees and departments tables:
+As an example, let's join the employees and departments tables. 
+First we register the dataframes as temporary tables (That allow us to use Spark SQL on them):
 <pre lang="scala">
 scala> employees.registerTempTable("empTable")
 
@@ -760,7 +763,7 @@ scala> departments.registerTempTable("deptTable")
 <br>
 <h3>Use SparkSQL To Create A DataFrame That Matches Our Target Table in Cassandra</h3>
 We'll select the columns that we want into a new dataframe called "emps_lc_subset":
-We can do it like this using SparkSQL to join records in the temprary tables that we registered above:
+We can do it like this using SparkSQL to join records in the temporary tables that we registered above:
 <pre lang="scala">
 scala> val emps_lc_subset = sqlContext.sql("SELECT employee_id, first_name, last_name, email, phone_number, hire_date, salary, commission_pct FROM empTable")
 
@@ -876,7 +879,7 @@ only showing top 5 rows
 <h2>Query 2: Query All Departments And Employees by Department</h2>
 
 <H3>Multi-Table Joins In SparkSQL</h3>
-when we migrate data from a relational database to a NoSQL database like Apache Cassandra there is invariably a need to perform some element of data transformation. Transformation typically involves duplication and de-normalisation of data and to do this we frequently want to join data between tables. Let's see how we can do that in Spark.
+When we migrate data from a relational database to a NoSQL database like Apache Cassandra there is invariably a need to perform some element of data transformation. Transformation typically involves duplication and de-normalisation of data and to do this we frequently want to join data between tables. Let's see how we can do that in Spark.
 
 <H3>Create Cassandra Table EMPLOYEES_BY_DEPT</h3>
 To satisfy Query 2 we have a table for Employees stored by Department.
