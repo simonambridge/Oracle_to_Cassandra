@@ -134,7 +134,7 @@ Connected to Test Cluster at 127.0.0.1:9042.
 Use HELP for help.
 cqlsh> 
 </pre>
-Type exist in cqlsh to return to the shell prompt.
+Type exit in cqlsh to return to the shell prompt.
 <br>
 
 <H2>Identify Spark Master</h2>
@@ -145,6 +145,9 @@ $ dse client-tool spark master-address
 spark://127.0.0.1:7077
 </pre> 
 OK, let's go look at our source data in the Oracle database.
+
+> If you have your own data you can substitute your schema for the HR schema shown)
+
 <br>
 <h1>Oracle Database</h1>
 We're going to create our source data for this exercise using the scripts supplied by Oracle. 
@@ -392,7 +395,7 @@ SQL> select * from regions where region_id=2;
 <h1>Using Spark To Read Oracle Data</h1>
 So all is looking good on the Oracle side. Now time to turn to DSE/Cassandra and Spark.
 
-<h2>Download Oracle ojdbc7.jar</h2>
+<h2>Setup Oracle ojdbc7.jar</h2>
 We have to add the Oracle JDBC jar file to our Spark classpath so that Spark knows how to talk to the Oracle database.
 
 <br>
@@ -401,11 +404,11 @@ For this test we only need the jdbc driver file on our single (SparkMaster) node
 In a bigger cluster we would need to distribute it to the slave nodes too.
 
 <h3>Update Executor Path For ojdbc7.jar In spark-defaults.conf</h3>
-Add the classpath for the ojdbc7.jar file for the executors (the path for the driver seems be required on the command line at run time as well, see below).
+Add the classpath for the ojdbc7.jar file for the executors.
 <pre>
 # vi /etc/dse/spark/spark-defaults.conf
 </pre>
-Add the following lines pointing to the location of your ojdbc7.jar file:
+Add the following lines pointing to the location of your ojdbc7.jar file (/app/oracle/downloads is my location, yours may be different):
 <pre>
 spark.driver.extraClassPath = /app/oracle/downloads/ojdbc7.jarr
 spark.executor.extraClassPath = /app/oracle/downloads/ojdbc7.jar
@@ -419,7 +422,7 @@ $ sudo service dse start
 
 
 <h2>Start The Spark REPL</h2>
-I'm passing to the path to the ojdbc7.jar file on the command line (shouldn't be needed as the driver path is defined in the spark-defaults.conf file now, but it seems not to work without it).
+I'm passing to the path to the ojdbc7.jar file on the command line (this shouldn't be needed as the driver path is defined in the spark-defaults.conf file now, but it seems not to work without it).
 <pre>
 $ dse spark --driver-class-path /app/oracle/downloads/ojdbc7.jar -deprecation
 Welcome to
@@ -439,7 +442,7 @@ Hive context available as sqlContext. Will be initialized on first use.
 <br>
 
 <h2>Import Some Classes</h2>
-We import some classes:
+We import some classes we may or may not use...
 <pre lang="scala">
 import com.datastax.spark.connector._
 import com.datastax.spark.connector.cql.CassandraConnector
@@ -460,14 +463,14 @@ For Spark 1.4 onwards:
 scala> val employees = sqlContext.read.format("jdbc").option("url", "jdbc:oracle:thin:hr/hr@localhost:1521/orcl").option("driver", "oracle.jdbc.OracleDriver").option("dbtable", "employees").load()
 </pre>
 
-The Spark REPL responds with:
+The Spark REPL responds successfully with:
 <pre>
 employees: org.apache.spark.sql.DataFrame = [EMPLOYEE_ID: decimal(6,0), FIRST_NAME: string, LAST_NAME: string, EMAIL: string, PHONE_NUMBER: string, HIRE_DATE: timestamp, JOB_ID: string, SALARY: decimal(8,2), COMMISSION_PCT: decimal(2,2), MANAGER_ID: decimal(6,0), DEPARTMENT_ID: decimal(4,0)]
 </pre>
 All good so far.
 
 <h2>Examining The DataFrame</h2>
-Now that we've created a dataframe using the jdbc method shown above, we can use the dataframe method printSchema() to look at the dataframe schema. 
+Now that we've created a dataframe using the JDBC method shown above, we can use the dataframe method printSchema() to look at the dataframe schema. 
 You'll notice that it looks a lot like a table. That's great because it means that we can use it to manipulate large volumes of tabular data:
 
 <pre lang="scala">
@@ -502,7 +505,7 @@ scala> employees.show(5)
 only showing top 5 rows
 </pre>
 
-Let's load some data from the Oracle table Departments:
+We have Employees. Now let's load some data from the Oracle table Departments:
 For Spark versions below 1.4:
 <pre lang="scala">
 scala> val departments = sqlContext.load("jdbc", Map("url" -> "jdbc:oracle:thin:hr/hr@localhost:1521/orcl", "dbtable" -> "departments"))
@@ -518,9 +521,11 @@ REPL responds:
 departments: org.apache.spark.sql.DataFrame = [DEPARTMENT_ID: decimal(4,0), DEPARTMENT_NAME: string, MANAGER_ID: decimal(6,0), LOCATION_ID: decimal(4,0)]
 </pre>
 
-There are some options available that allow you to tune how Spark uses the JDBC driver. The JDBC datasource supports partitionning so that you can specify how Spark will parallelize the load operation from the JDBC source. By default a JDBC load will be sequential which is much less efficient where multiple workers are available.
+<h3><b>Note:</b> JDBC Tuning</h3>
+There are some options available that allow you to tune how Spark uses the JDBC driver. The JDBC datasource supports partitioning - that means that you can specify how Spark will parallelize the load operation from the JDBC source. 
+By default a JDBC load will be sequential which is much less efficient where multiple workers are available.
 
-The options describe how to partition the table when reading in parallel from multiple workers:
+These options describe how to partition the table when reading in parallel from multiple workers:
 <ul>
 <li>partitionColumn</li>
 <li>lowerBound</li>
@@ -528,10 +533,9 @@ The options describe how to partition the table when reading in parallel from mu
 <li>numPartitions.	</li>
 </ul>
 
-These options must all be specified if any of them is specified. 
+These options must **all** be specified if any of them is specified. 
 <ul>
 <li>partitionColumn must be a numeric column from the table in question used to partition the table.</li>
-
 <li>Notice that lowerBound and upperBound are just used to decide the partition stride, not for filtering the rows in table. So all rows in the table will be partitioned and returned.</li>
 <li>fetchSize	is the JDBC fetch size, which determines how many rows to fetch per round trip. This can help performance on JDBC drivers which default to low fetch size (eg. Oracle with 10 rows).</li>
 </ul>
@@ -553,10 +557,11 @@ scala> val departments = sqlContext.read.format("jdbc")
 
 > Don’t create too many partitions in parallel on a large cluster, otherwise Spark might crash the external database.
 
-You should experiment with these options when you load your data on your infrastructure.
-You can read more about this here: http://spark.apache.org/docs/latest/sql-programming-guide.html#jdbc-to-other-databases
+You can experiment with these options when you load your data on your infrastructure.
+Read more about this here: http://spark.apache.org/docs/latest/sql-programming-guide.html#jdbc-to-other-databases
 
-View the Departments schema:
+<h3>View the Departments DataFrame</h3>
+Examine the schema:
 <pre lang="scala">
 scala> departments.printSchema()
 root
@@ -566,7 +571,7 @@ root
  |-- LOCATION_ID: decimal(4,0) (nullable = true)
 </pre>
 
-At this point the JDBC statement has been validated but Spark hasn't yet checked the physical data (e.g. if you provide an invalid partitioning column you won't get an error message until you try to read the data).
+At this point the JDBC statement has been validated but Spark hasn't yet checked the physical data (this is called lazy evaluation - for example if you provide an invalid partitioning column you won't get an error message until you actually try to read the data, that is, perform an action).
 
 Now read records from the Departments DataFrame:
 
@@ -613,27 +618,29 @@ For this demonstration I will focus on the EMPLOYEES and DEPARTMENTS tables.
   </li>
 </ul>
 
-Remember that in a relational database maintaining those indexes is very expensive operation that becomes more expensive as the volume of data grows.
+Remember that in a relational database maintaining those indexes is very expensive operation that becomes more expensive as the volume of data grows. In the Cassandra world we start with the queries and then design the data model to support those queries. 
 
+What we are going to do:
 <ul>
   <li>
-    In the Cassandra world we start with the queries and then design the data model to support those queries. 
+    Pull the source data from Oracle
   </li>
   <li>
-    We want to pull the source data from Oracle and move it to the tables in Cassandra. 
+    Perform data transformations on the in-flight data in Spark using dataframes and SparkSQL to achieve this
   </li>
   <li>
-    We will perform data transformations on the in-flight data in Spark using dataframes and SparkSQL to achieve this.
+   Save it to tables in Cassandra
   </li>
 </ul>
 
 Our queries are:
 <ul>
   <li>
-    Query1: query all employees on EMPLOYEE_ID
+    Query1: query all Employees on EMPLOYEE_ID
   </li>
   <li>
-    Query2: query all departments on DEPARTMENT_ID, and query Employees by Department
+    Query2a: query all Departments on DEPARTMENT_ID
+    Query2b: query Employees by Department
   </li>
 </ul>
 
@@ -663,9 +670,9 @@ USE HR;
 
 De-normalising and potentially duplicating data in Cassandra is not a bad thing. It's quicker than updating indexes, and disk is cheap, and Cassandra writes are fast!
 
-So for Query 1 we'll also move the Department, Manager and Job data out of the EMPLOYEES table and use the EMPLOYEES table purely for employee personal data. We get the information that we've moved by creating tables specifically to support those queries. 
-See Query 2 as an example of getting data about departments and employees.
-For Query 2 we'll use EMPLOYEES_BY_DEPARTMENT to query Departments and Employees by Department.
+So for Query 1 we'll also move the Department, Manager and Job data out of the EMPLOYEES table and use the EMPLOYEES table purely for employee personal data. We get the information that we've moved by creating tables specifically to support those queries.
+We will de-normalise the relationship between Employee and Department using the table created for Query 2.
+See Query 2 as an example of getting data about departments and employees - we'll use EMPLOYEES_BY_DEPARTMENT to query Departments, and also query Employees by Department.
 
 <h2>Query 1: Query All Employees on EMPLOYEE_ID</h2>
 Create the table we use to hold employees in Cassandra:
@@ -751,26 +758,27 @@ There are some columns in the dataframe above that we don't need for this exerci
 
 <h3>Create SparkSQL Tables From The DataFrames</h3>
 We can manipulate the data in Spark in two ways. We can use the dataframe methods which allow for querying and filtering of data. Or we can use SparkSQL. To access data using SparkSQL we need to register a dataframe as a temporary table against which we can run relational SQL queries.
+<br>
+<h3>Use SparkSQL To Create A DataFrame That Matches Our Target Table in Cassandra</h3>
+We'll select the columns that we want into a new dataframe called "emps_lc_subset":
 
-As an example, let's join the employees and departments tables. 
-First we register the dataframes as temporary tables (That allow us to use Spark SQL on them):
+We can do it like this using SparkSQL to join records in 'temporary' tables that we registere that provide an API for relational queries. 
+
+We register them like this:
 <pre lang="scala">
 scala> employees.registerTempTable("empTable")
 
 scala> departments.registerTempTable("deptTable")
 </pre>
 
-<br>
-<h3>Use SparkSQL To Create A DataFrame That Matches Our Target Table in Cassandra</h3>
-We'll select the columns that we want into a new dataframe called "emps_lc_subset":
-We can do it like this using SparkSQL to join records in the temporary tables that we registered above:
+Now we can run a query using those 'tables':
 <pre lang="scala">
 scala> val emps_lc_subset = sqlContext.sql("SELECT employee_id, first_name, last_name, email, phone_number, hire_date, salary, commission_pct FROM empTable")
 
 emps_lc_subset: org.apache.spark.sql.DataFrame = [employee_id: decimal(6,0), first_name: string, last_name: string, email: string, phone_number: string, hire_date: timestamp, salary: decimal(8,2), commission_pct: decimal(2,2)]
 </pre>
 
-And we now have the schema we're looking for to match the Cassandra target table.
+And we now have the schema we're looking for to match the Cassandra target table for Query 1.
 <pre lang="scala">
 scala> emps_lc_subset.printSchema()
 root
@@ -793,7 +801,7 @@ scala> val emps_lc_subset = employees.select("employee_id","first_name","last_na
 emps_lc_subset: org.apache.spark.sql.DataFrame = [employee_id: decimal(6,0), first_name: string, last_name: string, email: string, phone_number: string, hire_date: timestamp, salary: decimal(8,2), commission_pct: decimal(2,2)]
 </pre>
 
-And to prove the results are the same:
+And to demonstrate that the results are the same:
 <pre lang="scala">
 scala> emps_lc_subset.printSchema()
 root
@@ -847,7 +855,7 @@ cqlsh:hr> select * from employees;
          181 |           null |  JFLEAUR |        Jean | 2006-02-23 00:00:00-0500 |      Fleaur |       650.507.9877 |  3100.00
 </pre>
 
-<b>Note:</b>The integrated DSE release of Cassandra and Spark Spark also gives us the opportunity to directly read tables in Cassandra.
+<b>Note:</b>The integrated DSE release of Cassandra and Spark also gives us the opportunity to directly read tables in Cassandra.
 
 For example, read some columns from the employees table:
 <pre lang="scala">
@@ -904,7 +912,7 @@ We create a dataframe containing employees-by-department by joining our SparkSQL
 In the Spark REPL:
 As an example, let's join the employees and departments tables.
 
-<b>Note:</b> If you haven't already registered the Spark SQL tables do it like this:
+Register the dataframes as temporary tables if not done already (this allows us to use Spark SQL on them):
 
 <pre lang="scala">
 scala> employees.registerTempTable("empTable")
@@ -1009,7 +1017,7 @@ cqlsh:hr> select department_name, first_name, last_name from employees_by_dept w
 </pre>
 
 <h3>Query 3: Query All Jobs, And Employees By Job</h3>
-Query 3 asks for a list of all job titles and descriptions. The second part of this query requirement was to be able to return Employees by Job</h3>
+Query 3 asks for a list of all job titles and descriptions. The second part of this query requirement was to be able to return Employees by Job
 With the techniques described above you should now be able to have a go at doing the same thing yourself with the Jobs and Employees tables.
 (hint: replace the HR.JOBS lookup table - use EMPLOYEES_BY_JOB with a PK on JOB_ID, clustered on EMPLOYEE_ID)
 
