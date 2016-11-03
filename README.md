@@ -571,7 +571,7 @@ root
  |-- LOCATION_ID: decimal(4,0) (nullable = true)
 </pre>
 
-At this point the JDBC statement has been validated but Spark hasn't yet checked the physical data (this is called lazy evaluation - for example if you provide an invalid partitioning column you won't get an error message until you actually try to read the data, that is, perform an action).
+>At this point the JDBC statement has been validated but Spark hasn't yet checked the physical data (this is called lazy evaluation - for example if you provide an invalid partitioning column you won't get an error message until you actually try to read the data, that is, perform an action).
 
 Now read records from the Departments DataFrame:
 
@@ -725,12 +725,14 @@ root
 We want to change those column names to lower case - so we create a list of column names in lower case matching the dataframe order, creating a new dataframe "emps_lc" in the process.
 
 We rename the columns in the dataframe like this:
-
+1. Create a new collection of names:
 <pre lang="scala">
 scala> val newNames = Seq("employee_id", "first_name", "last_name", "email","phone_number","hire_date","job_Id","salary","commission_pct","manager_id","department_id")
 
 newNames: Seq[String] = List(employee_id, first_name, last_name, email, phone_number, hire_date, job_Id, salary, commission_pct, manager_id, department_id)
-
+</pre>
+2. Create a new dataframe from employees using the new column names:
+<pre>
 scala> val emps_lc = employees.toDF(newNames: _*)
 
 emps_lc: org.apache.spark.sql.DataFrame = [employee_id: decimal(6,0), first_name: string, last_name: string, email: string, phone_number: string, hire_date: timestamp, job_Id: string, salary: decimal(8,2), commission_pct: decimal(2,2), manager_id: decimal(6,0), department_id: decimal(4,0)]
@@ -754,15 +756,15 @@ root
 </pre>
 
 
-There are some columns in the dataframe above that we don't need for this exercise. We will simply create a new dataframe from this one, containing just the columns that we do want to use.
+There are some columns in the dataframe above that we don't need for this exercise. For simplicity we will simply create a new dataframe from this one, containing just the columns that we do want to use.
 
 <h3>Create SparkSQL Tables From The DataFrames</h3>
-We can manipulate the data in Spark in two ways. We can use the dataframe methods which allow for querying and filtering of data. Or we can use SparkSQL. To access data using SparkSQL we need to register a dataframe as a temporary table against which we can run relational SQL queries.
+We can manipulate the data in Spark in two ways. We can use the dataframe methods which allow for querying and filtering of data. Or we can use SparkSQL to do that. To access data using SparkSQL we need to register our dataframe as a temporary table against which we can run relational SQL queries.
 <br>
 <h3>Use SparkSQL To Create A DataFrame That Matches Our Target Table in Cassandra</h3>
 We'll select the columns that we want into a new dataframe called "emps_lc_subset":
 
-We can do it like this using SparkSQL to join records in 'temporary' tables that we registere that provide an API for relational queries. 
+We can do it like this using SparkSQL to join records in 'temporary' tables that we register that provide an API for relational queries. 
 
 We register them like this:
 <pre lang="scala">
@@ -828,7 +830,7 @@ only showing top 5 rows
 </pre>
 
 <h3>Write The Employees Dataframe To Cassandra</h3>
-We now have our data nicely defined in a Spark dataframe ready to be written to Cassandra. The next step is to save the data to a Cassandra table using the Spark-Cassandra connector (Note: you must truncate the table first if it isn't empty):
+We now have our data nicely defined in a Spark dataframe ready to be written to a table in Cassandra. The next step is to save the data to a Cassandra table using the Spark-Cassandra connector (Note: you must truncate the table first if it isn't empty):
 
 <pre lang="scala">
 scala> emps_lc_subset.write.format("org.apache.spark.sql.cassandra").options(Map( "table" -> "employees", "keyspace" -> "hr")).save()
