@@ -87,13 +87,14 @@ Enable Solr and Spark by changing the flag from "0" to "1" in:
 # vi /etc/default/dse
 </pre>
 e.g.:
+
 <pre>
 # Start the node in DSE Search mode
 SOLR_ENABLED=1
-
 # Start the node in Spark mode
 SPARK_ENABLED=1
 </pre>
+
 <br>
 Delete the old (Cassandra-only) datacentre databases if they exist:
 <pre>
