@@ -198,8 +198,10 @@ Log into SQL Plus as the HR user.
 
 The HR user has a simple schema consisting of 7 tables. The data is stored in a relational format, using foreign keys to look up into tables e.g. To find which department an employee belongs to, you use the value in the DEPARTMENT_ID column to look up a record in the DEPARTMENTS table to identify the department the employee belongs to. 
 You can walk through the model using the diagram below:
- 
-![alt text] (https://raw.githubusercontent.com/simonambridge/Oracle_to_Cassandra/master/Oracle_to_Cassandra_OSchema.png)
+
+<p align="center">
+  <img src="Oracle_to_Cassandra_OSchema.png"/>
+</p>
 
 <pre>
 $ sqlplus hr/hr
