@@ -661,7 +661,7 @@ In Cassandra we will create the following tables:
 The first thing that we need to do in Cassandra is create a keyspace to contain the tables that we will create. I'm using a replication factor of 1 because I have one node in my development cluster. For most production deployments we recommend a multi-datacenter Active-Active HA setup across geographical regions using NetworkTopologyStrategy with RF=3:
 
 Log into cqlsh 
-> If you didn't change the IP defaults in cassandra.yaml then just type 'cqlsh' - if you changed the IP to be the host IP then you may need to supply the hostname e.g. 'cqlsh <hostname>'.
+> If you didn't change the IP defaults in cassandra.yaml then just type ```cqlsh``` - if you changed the IP to be the host IP then you may need to supply the hostname e.g. ```cqlsh <hostname>```.
 
 From the cqlsh prompt, create the keyspace to hold our Cassandra HR tables:
 <pre>
