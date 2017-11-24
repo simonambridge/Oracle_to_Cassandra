@@ -413,7 +413,7 @@ Add the classpath for the ojdbc7.jar file for the executors.
 </pre>
 Add the following lines pointing to the location of your ojdbc7.jar file (/app/oracle/downloads is my location, yours may be different):
 <pre>
-spark.driver.extraClassPath = /app/oracle/downloads/ojdbc7.jarr
+spark.driver.extraClassPath = /app/oracle/downloads/ojdbc7.jar
 spark.executor.extraClassPath = /app/oracle/downloads/ojdbc7.jar
 </pre>
 
