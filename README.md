@@ -425,7 +425,7 @@ $ sudo service dse start
 
 
 <h2>Start The Spark REPL</h2>
-I'm passing to the path to the ojdbc7.jar file on the command line (this shouldn't be needed as the driver path is defined in the spark-defaults.conf file now, but it seems not to work without it).
+I'm passing the path to the ojdbc7.jar file to Spark on the command line (this shouldn't be needed as the driver path is defined in the spark-defaults.conf file now, but it seems not to work without it).
 <pre>
 $ dse spark --driver-class-path /app/oracle/downloads/ojdbc7.jar -deprecation
 Welcome to
