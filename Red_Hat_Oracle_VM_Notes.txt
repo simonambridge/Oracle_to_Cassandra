@@ -1,8 +1,8 @@
-<H1>Set Up Red Hat</H1>
+# Set Up Red Hat
 Various steps required to configure the default Oracle-supplied VM image.
 <br>
 
-<h2>1.Tidy Up...</h2>
+## 1.Tidy Up...</h2>
 
 The output from ifconfig gives us the current IP setup:
 <pre>
@@ -80,7 +80,7 @@ We are also going to turn off iptables while we do this configuration to make su
 iptables: Firewall is not running.
 </pre>
 <br>
-<h2>2.Update The System network File</h2>
+## 2.Update The System network File
 
 Change the supplied network settings to to this:
 <pre>
@@ -101,7 +101,7 @@ GATEWAY=<your router/gateway address>
 NOZEROCONF=yes
 </pre>
 <br>
-<h2>3.Update The System Hostname</h2>
+## 3.Update The System Hostname
 Change it from the command line.
 
 Check the current setting for hostname:
@@ -131,7 +131,7 @@ demo.us.oracle.com
 # HOSTNAME=sampleapp export HOSTNAME
 </pre>
 <br>
-<h2>4.Update The /etc/hosts File</h2>
+## 4.Update The /etc/hosts File
 
 We need to change the ip addresses and host names in the supplied hosts file (and its a bit untidy anyway). I will use the IP address that VBox assigns to this client (10.0.2.15):
 <pre>
@@ -152,7 +152,7 @@ PING sampleapp (10.0.2.15) 56(84) bytes of data.
 64 bytes from sampleapp (10.0.2.15): icmp_seq=2 ttl=64 time=0.037 ms
 </pre>
 <br>
-<h2>5.Update the /etc/resolv.conf File</h2>
+## 5.Update the /etc/resolv.conf File
 We should be using something like the Google DNS for domain name resolution:
 <pre>
 # cat /etc/resolv.conf
@@ -163,7 +163,7 @@ nameserver 8.8.4.4
 </pre>
 <br>
 
-<h2>6. Restart The Network Service</h2>
+## 6. Restart The Network Service
 As the root user restart the network service:
 <pre>
 # service network restart
@@ -181,14 +181,14 @@ Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
 </pre>
 
 <br>
-<h2>7.Check the version of Red Hat</h2>
+## 7.Check the version of Red Hat
 We need to know our O/S release for some of the following pre-requisites:
 <pre>
 # cat /etc/redhat-release 
 Red Hat Enterprise Linux Server release 6.8 (Santiago)
 </pre>
 <br>
-<h2>8.Remove The Oracle Proxy from /etc/yum.conf</h2>
+## 8.Remove The Oracle Proxy from /etc/yum.conf
 yum is configured to use an Oracle proxy, which isn't very helpful if you want to add more stuff.
 Edit the yum conf file and remove the line in there specifying the Oracle Proxy:
 <pre>
@@ -196,7 +196,7 @@ Edit the yum conf file and remove the line in there specifying the Oracle Proxy:
 </pre>
 <br>
 
-<H2>9. Install Python 2.7 Required For cqlsh</h2>
+## 9. Install Python 2.7 Required For cqlsh
 
 We next need to install Python 2.7 to avoid the "No appropriate python interpreter found" error message that prevents cqlsh from starting.
 
@@ -235,10 +235,10 @@ We will fix the pytz error next.
 <br>
 <br>
 
-<h2>10.Install EPEL And Other Pre-Reqs (mostly Python stuff)</h2>
+## 10.Install EPEL And Other Pre-Reqs (mostly Python stuff)
 To resolve the Python time zone warning I installed EPEL (Extra Packages for Enterprise Linux) and some Python utilities.
 <br>
-<h3>EPEL</h3>
+### EPEL
 I found a good EPEL install link here:
 
 http://sharadchhetri.com/2014/05/30/install-pip-centos-rhel-ubuntu-debian/
@@ -272,7 +272,7 @@ The install creates two files:
 - /etc/yum.repos.d/epel-testing.repo
 <br>
 
-<h3>Python Stuff</h3>
+### Python Stuff
 Now install pip to manage the python stuff:
 <pre>
 # yum install -y python-pip
@@ -309,7 +309,7 @@ Use easy_install to install the pytz package (the error in cqlsh):
 </pre>
 
 <br>
-<h3>All Good</h3>
+### All Good
 Now no error messages when starting cqlsh:
 
 <pre>
@@ -322,7 +322,7 @@ cqlsh>
 
 <br>
 
-<h2>11.Check O/S cassandra Account Details</h2>
+## 11.Check O/S cassandra Account Details
 The Cassandra account was created by the installer:
 <pre>
 # cat /etc/passwd | grep cassandra
@@ -342,7 +342,7 @@ cassandra - as unlimited
 </pre>
 If  you want to log in as the Cassandra user you will either need to su - from the root account, or use the root account to set a password for the casssandra account to allow interactive logins.
 
-<h2>12.Check Oracle Database Name</h2>
+## 12.Check Oracle Database Name
 <pre>
 $ sqlplus / as sysdba
 
@@ -363,7 +363,7 @@ ORCL.US.ORACLE.COM
 1 row selected.
 </pre>
 
-<h2>13.Set Up Oracle TNS</h2>
+## 13.Set Up Oracle TNS
 The environment variable TNS_ADMIN should be pointing to the location of your tns configuration files.
 <pre>
 $ echo $TNS_ADMIN
@@ -374,8 +374,8 @@ listener.ora  listener.ora~  samples  shrept.lst  sqlnet.ora  tnsnames.ora  tnsn
 
 
 
-<h3>Configure listener.ora</h3>
-<h4>Set Hostname</h4>
+### Configure listener.ora
+####  Set Hostname</h4>
 Change hostname from demo.us.oracle.com to localhost.
 The config file is:
 <pre>
@@ -394,7 +394,8 @@ LISTENER =
     )
   )
 </pre>
-<h3>Add A Service To listener.ora</h3>
+
+### Add A Service To listener.ora
 We need to add a service listening for connections to database orcl.
 Add this section to the end of listener.ora:
 <pre>
@@ -406,7 +407,7 @@ SID_LIST_LISTENER=
       (SID_NAME=orcl)))
 </pre>
 
-<h3>Configure Host Names In tnsnames.ora</h3>
+### Configure Host Names In tnsnames.ora</h3>
 Change all occurrences of hostname from demo.us.oracle.com to localhost.
 
 <pre>
@@ -437,7 +438,7 @@ pdborcl =
   )
 </pre>
 
-<h3>Start the listener</h3>
+### Start the listener
 <pre>
 $ lsnrctl start
 
@@ -474,7 +475,7 @@ Service "orcl" has 1 instance(s).
 The command completed successfully
 </pre>
 
-<h3>Check tnsping</h3>
+### Check tnsping
 
 <pre>
 $ tnsping orcl
@@ -492,7 +493,7 @@ Attempting to contact (DESCRIPTION = (ADDRESS = (PROTOCOL = TCP)(HOST = localhos
 OK (0 msec)
 </pre>
 
-<h3>Check connection with sqlplus</h3>
+### Check connection with sqlplus
 <pre>
 $ sqlplus hr/hr@orcl
 
@@ -509,7 +510,7 @@ With the Partitioning, OLAP, Advanced Analytics and Real Application Testing opt
 SQL> 
 </pre>
 
-<H2>14.Fix VBox Shared Clipboard</H2>
+## 14.Fix VBox Shared Clipboard
 My clipboard didn't seem to work but this fixes it.
 
 In Virtual Box mount the Guest Additions CD and run it when prompted for the root password.
