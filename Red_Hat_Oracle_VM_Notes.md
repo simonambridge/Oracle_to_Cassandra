@@ -2,7 +2,7 @@
 Various steps required to configure the default Oracle-supplied VM image.
 <br>
 
-## 1.Tidy Up...</h2>
+##1.Tidy Up...</h2>
 
 The output from ifconfig gives us the current IP setup:
 <pre>
@@ -80,7 +80,7 @@ We are also going to turn off iptables while we do this configuration to make su
 iptables: Firewall is not running.
 </pre>
 <br>
-## 2.Update The System network File
+##2.Update The System network File
 
 Change the supplied network settings to to this:
 <pre>
@@ -101,7 +101,8 @@ GATEWAY=<your router/gateway address>
 NOZEROCONF=yes
 </pre>
 <br>
-## 3.Update The System Hostname
+
+##3.Update The System Hostname
 Change it from the command line.
 
 Check the current setting for hostname:
