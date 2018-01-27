@@ -2,7 +2,7 @@
 Various steps required to configure the default Oracle-supplied VM image.
 <br>
 
-## 1.Tidy Up...</h2>
+## 1.Tidy Up...
 
 The output from ifconfig gives us the current IP setup:
 <pre>
@@ -80,7 +80,7 @@ We are also going to turn off iptables while we do this configuration to make su
 iptables: Firewall is not running.
 </pre>
 <br>
-##2.Update The System network File
+## 2.Update The System network File
 
 Change the supplied network settings to to this:
 <pre>
@@ -132,8 +132,8 @@ demo.us.oracle.com
 # HOSTNAME=sampleapp export HOSTNAME
 </pre>
 <br>
-## 4.Update The /etc/hosts File
 
+## 4.Update The /etc/hosts File
 We need to change the ip addresses and host names in the supplied hosts file (and its a bit untidy anyway). I will use the IP address that VBox assigns to this client (10.0.2.15):
 <pre>
 # vi /etc/hosts
@@ -153,6 +153,7 @@ PING sampleapp (10.0.2.15) 56(84) bytes of data.
 64 bytes from sampleapp (10.0.2.15): icmp_seq=2 ttl=64 time=0.037 ms
 </pre>
 <br>
+
 ## 5.Update the /etc/resolv.conf File
 We should be using something like the Google DNS for domain name resolution:
 <pre>
@@ -239,6 +240,7 @@ We will fix the pytz error next.
 ## 10.Install EPEL And Other Pre-Reqs (mostly Python stuff)
 To resolve the Python time zone warning I installed EPEL (Extra Packages for Enterprise Linux) and some Python utilities.
 <br>
+
 ### EPEL
 I found a good EPEL install link here:
 
@@ -310,6 +312,7 @@ Use easy_install to install the pytz package (the error in cqlsh):
 </pre>
 
 <br>
+
 ### All Good
 Now no error messages when starting cqlsh:
 
