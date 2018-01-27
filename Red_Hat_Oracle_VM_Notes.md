@@ -102,7 +102,7 @@ NOZEROCONF=yes
 </pre>
 <br>
 
-##3.Update The System Hostname
+## 3.Update The System Hostname
 Change it from the command line.
 
 Check the current setting for hostname:
