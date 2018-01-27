@@ -80,6 +80,7 @@ We are also going to turn off iptables while we do this configuration to make su
 iptables: Firewall is not running.
 </pre>
 <br>
+
 ## 2.Update The System network File
 
 Change the supplied network settings to to this:
