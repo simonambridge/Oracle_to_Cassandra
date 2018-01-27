@@ -2,7 +2,7 @@
 Various steps required to configure the default Oracle-supplied VM image.
 <br>
 
-##1.Tidy Up...</h2>
+## 1.Tidy Up...</h2>
 
 The output from ifconfig gives us the current IP setup:
 <pre>
